@@ -332,5 +332,5 @@ app.get("/api/hasil/mapel/:mapel", authMiddleware, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Smart ASAS v3 berjalan di http://localhost:${PORT}`);
+  console.log(`KoreksiK di http://localhost:${PORT}`);
 });
