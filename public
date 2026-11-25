@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart ASAS - Platform Evaluasi & Anbuso</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    .navy-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+
+    #print-area { display: none; }
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body { background: #fff; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+      #print-area { display: block !important; }
+      .kertas-siswa {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        page-break-after: always;
+        overflow: hidden;
+      }
+    }
+
+  </style>
+</head>
+<body class="min-h-screen pb-16">
+
+  <!-- LAYAR LOGIN / REGISTRASI & PIN ENKRIPSI GURU -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900 no-print">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl space-y-5">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center">
+          <span class="material-icons-round text-2xl">center_focus_strong</span>
+        </div>
+        <div>
+          <h1 class="text-lg font-extrabold text-slate-900">Smart ASAS Studio</h1>
+          <p class="text-xs text-slate-500">Koreksi LJK Kamera, Cetak Timpa & Anbuso</p>
+        </div>
+      </div>
+
+      <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+        <button onclick="switchAuthTab('login')" id="tab-auth-login" class="flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm">Masuk Akun</button>
+        <button onclick="switchAuthTab('register')" id="tab-auth-reg" class="flex-1 py-2 rounded-lg text-slate-500">Daftar Guru Baru</button>
+      </div>
+
+      <div id="auth-nama-box" class="hidden">
+        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
+        <input type="text" id="auth-nama" placeholder="Contoh: Dimas Sekar Langit, S.Pd" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Email</label>
+        <input type="email" id="auth-email" placeholder="nama@sekolah.sch.id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Password Akun</label>
+        <input type="password" id="auth-password" placeholder="Minimal 6 karakter" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+      </div>
+
+      <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 space-y-2">
+        <label class="block text-xs font-extrabold text-teal-900 flex items-center gap-1.5">
+          <span class="material-icons-round text-base text-teal-700">vpn_key</span>
+          PIN Enkripsi Kunci Jawaban (Zero-Knowledge)
+        </label>
+        <input type="password" id="auth-pin" placeholder="Masukkan PIN rahasia Anda" class="w-full px-3.5 py-2 rounded-xl border border-teal-300 bg-white text-sm font-bold">
+        <p class="text-[11px] text-teal-800 leading-snug">PIN ini mengenkripsi kunci jawaban di browser Anda. Server tidak menyimpan PIN ini.</p>
+      </div>
+
+      <button onclick="submitAuth()" id="btn-auth-submit" class="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition">
+        Masuk ke Ruang Kerja
+      </button>
+    </div>
+  </div>
+
+  <!-- APLIKASI UTAMA -->
+  <div id="main-app" class="hidden">
+    <header class="navy-header text-white sticky top-0 z-40 shadow-md no-print">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+            <span class="material-icons-round">center_focus_strong</span>
+          </div>
+          <div>
+            <h1 class="text-base font-extrabold tracking-tight">Smart ASAS Studio</h1>
+            <div class="flex items-center gap-2 text-[11px] text-slate-300">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span id="user-display-label">-</span>
+            </div>
+          </div>
+        </div>
+
+        <nav class="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-xl border border-slate-700">
+          <button onclick="bukaModul('scan')" id="nav-scan" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-teal-600 text-white flex items-center gap-1.5 transition">
+            <span class="material-icons-round text-base">videocam</span>
+            1. Live Scan & Ekspor
+          </button>
+          <button onclick="bukaModul('config')" id="nav-config" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+            <span class="material-icons-round text-base">tune</span>
+            2. Konfigurasi Paket
+          </button>
+          <button onclick="bukaModul('anbuso')" id="nav-anbuso" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+            <span class="material-icons-round text-base">analytics</span>
+            3. Analisis Butir Soal
+          </button>
+        </nav>
+
+        <div class="flex items-center gap-2">
+          <button onclick="bukaModalOcr()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <span class="material-icons-round text-sm text-teal-400">key</span>
+            <span>API OCR</span>
+          </button>
+          <button onclick="logout()" class="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-300" title="Keluar">
+            <span class="material-icons-round text-base">logout</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MODAL PENGATURAN API OCR LOKAL -->
+    <div id="modal-ocr" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-extrabold text-slate-900">Pengaturan Mesin Pembaca (OCR)</h3>
+          <button onclick="tutupModalOcr()" class="text-slate-400 hover:text-slate-700"><span class="material-icons-round">close</span></button>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Mode Pembacaan</label>
+          <select id="ocr-mode-select" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+            <option value="SIMULASI">Mode Simulasi (Tes Tanpa API Key)</option>
+            <option value="GEMINI">Gemini 3.5 Flash-Lite (Google AI Studio)</option>
+            <option value="SNAPTOJSON">Snaptojson API</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">API Key Pribadi (Disimpan di Browser Anda)</label>
+          <input type="password" id="ocr-api-key-input" placeholder="Tempel API Key Gemini atau Snaptojson" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button onclick="tutupModalOcr()" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold">Batal</button>
+          <button onclick="simpanSettingOcr()" class="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold">Simpan</button>
+        </div>
+      </div>
+    </div>
+
+
+  <!-- MODAL PENGATURAN TEMA CETAK TIMPA, LINGKARAN KUNCI & PRATINJAU A4 -->
+  <div id="modal-cetak-preview" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 no-print overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-5xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+      <div class="navy-header text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="material-icons-round text-teal-300">print</span>
+          <div>
+            <h3 class="text-sm font-extrabold">Tema Cetak Timpa, Lingkaran Koreksi & Pratinjau A4</h3>
+            <p class="text-[11px] text-slate-300">Sesuaikan gaya angka nilai dan posisi lingkaran jawaban benar sebelum mencetak ke kertas siswa</p>
+          </div>
+        </div>
+        <button onclick="tutupModalCetak()" class="text-slate-300 hover:text-white"><span class="material-icons-round">close</span></button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12">
+        <!-- Panel Kontrol Kiri -->
+        <div class="lg:col-span-5 p-5 border-b lg:border-b-0 lg:border-r border-slate-200 space-y-4 max-h-[78vh] overflow-y-auto">
+          <div>
+            <label class="block text-xs font-extrabold text-slate-800 mb-2">1. Pilih Tema Cetakan Angka Nilai</label>
+            <div class="grid grid-cols-2 gap-2" id="pilihan-tema-grid">
+              <button type="button" onclick="pilihTemaCetak('classic')" id="tema-btn-classic" class="p-2.5 rounded-xl border-2 border-teal-600 bg-teal-50/60 text-left transition">
+                <div class="text-xs font-extrabold text-slate-900">Klasik Kotak</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Bingkai tegas double-border</div>
+              </button>
+              <button type="button" onclick="pilihTemaCetak('circle')" id="tema-btn-circle" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
+                <div class="text-xs font-extrabold text-slate-900">Stempel Bulat</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Lingkaran stempel guru</div>
+              </button>
+              <button type="button" onclick="pilihTemaCetak('minimal')" id="tema-btn-minimal" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
+                <div class="text-xs font-extrabold text-slate-900">Minimalis Garis</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Angka besar + garis bawah</div>
+              </button>
+              <button type="button" onclick="pilihTemaCetak('card')" id="tema-btn-card" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
+                <div class="text-xs font-extrabold text-slate-900">Kartu Rincian</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Nilai + Benar/Salah + Status</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Posisi Atas Nilai (mm)</label>
+              <input type="number" id="prev-offset-top" value="52" oninput="renderPratinjauCetak()" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Warna Tinta Koreksi</label>
+              <select id="prev-warna-tinta" onchange="renderPratinjauCetak()" class="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                <option value="#dc2626">Merah Koreksi (Disarankan)</option>
+                <option value="#0f172a">Hitam Pekat (Laser Monokrom)</option>
+                <option value="#0d9488">Tosca Gelap</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                <span class="material-icons-round text-sm text-rose-600">radio_button_unchecked</span>
+                2. Lingkari Kunci pada Soal Salah
+              </label>
+              <input type="checkbox" id="prev-aktif-lingkar-grid" checked onchange="renderPratinjauCetak()" class="w-4 h-4 accent-teal-600">
+            </div>
+            <p class="text-[11px] text-slate-600 leading-snug">Otomatis melingkari huruf kunci jawaban yang benar tepat di atas opsi A/B/C/D/E pada nomor yang dijawab salah oleh siswa.</p>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Tata Letak Kolom LJK</label>
+                <select id="prev-ljk-preset" onchange="terapkanPresetLjk()" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-[11px] font-bold bg-white">
+                  <option value="2col">2 Kolom (20 soal/kolom)</option>
+                  <option value="4col">4 Kolom (10 soal/kolom)</option>
+                  <option value="1col">1 Kolom Memanjang</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Atas Grid LJK (mm)</label>
+                <input type="number" id="prev-ljk-top" value="98" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Kiri Kolom 1 (mm)</label>
+                <input type="number" id="prev-ljk-left" value="34" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Jarak Antar Baris (mm)</label>
+                <input type="number" step="0.5" id="prev-ljk-rowh" value="7.5" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Lebar Antar Kolom (mm)</label>
+                <input type="number" id="prev-ljk-colw" value="85" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Jarak Opsi A-E (mm)</label>
+                <input type="number" step="0.5" id="prev-ljk-optgap" value="8.5" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+              </div>
+            </div>
+
+            <label class="flex items-center gap-2 text-[11px] font-semibold text-slate-700 pt-1">
+              <input type="checkbox" id="prev-aktif-ringkasan-atas" checked onchange="renderPratinjauCetak()" class="w-3.5 h-3.5 accent-teal-600">
+              Tampilkan juga daftar nomor salah dengan kunci dilingkari di bagian atas
+            </label>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="tutupModalCetak()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Tutup</button>
+            <button type="button" onclick="eksekusiPrintDariModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md transition">
+              <span class="material-icons-round text-base">print</span>
+              <span id="btn-modal-print-label">Cetak Sekarang ke Kertas A4</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel Pratinjau Visual Kanan -->
+        <div class="lg:col-span-7 bg-slate-200/80 p-5 flex flex-col items-center justify-center max-h-[78vh] overflow-y-auto">
+          <div class="w-full flex items-center justify-between mb-2 px-1">
+            <span class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Pratinjau Kertas A4 (210 x 297 mm)</span>
+            <span id="preview-sample-info" class="text-[11px] font-semibold text-slate-600">Contoh: Siswa Simulasi</span>
+          </div>
+          <!-- Simulasi Kertas A4 Proporsional (Skala 1mm = 2.1px -> 441px x 623px) -->
+          <div id="a4-preview-canvas" class="relative bg-white shadow-xl border border-slate-300 overflow-hidden" style="width: 441px; height: 623px;">
+            <!-- Lapisan Bayangan Lembar Jawaban Asli (Hanya tampil di layar pratinjau, tidak ikut dicetak) -->
+            <div id="a4-ghost-sheet" class="absolute inset-0 pointer-events-none opacity-45"></div>
+            <!-- Lapisan Hasil Cetakan Timpa Sesungguhnya -->
+            <div id="a4-overlay-layer" class="absolute inset-0 pointer-events-none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+    <main class="max-w-7xl mx-auto px-4 mt-6 no-print">
+
+      <!-- MODUL 1: LIVE SCANNER, CETAK TIMPA & EKSPOR EXCEL PER MAPEL -->
+      <div id="modul-scan" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="material-icons-round text-teal-600">filter_center_focus</span>
+                Kamera Auto-Focus
+              </h2>
+              <button type="button" id="btn-toggle-cam" onclick="toggleKamera()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center gap-1">
+                <span class="material-icons-round text-sm">videocam</span>
+                Nyalakan
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Paket Soal Aktif</label>
+              <select id="scan-pilih-paket" onchange="muatAntreanHasil()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                <option value="">Belum ada paket soal...</option>
+              </select>
+            </div>
+
+            <div class="relative w-full aspect-[3/4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
+              <video id="live-video" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
+              <div id="cam-placeholder" class="text-center p-6 text-slate-400">
+                <span class="material-icons-round text-5xl text-slate-600 mb-2">no_photography</span>
+                <p class="text-xs font-semibold text-slate-300">Kamera Belum Aktif</p>
+                <p class="text-[11px] mt-1">Klik <strong>Nyalakan</strong> lalu arahkan ke lembar jawaban hingga fokus terkunci otomatis.</p>
+              </div>
+              <div id="viewfinder-overlay" class="hidden absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+                <div class="flex justify-center">
+                  <span id="focus-badge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-900/80 text-white">Arahkan kertas ke bingkai...</span>
+                </div>
+                <div id="guide-box" class="w-full h-[78%] border-2 border-dashed border-white/50 rounded-xl relative"></div>
+                <div class="w-full bg-slate-900/80 rounded-full h-2 overflow-hidden">
+                  <div id="focus-progress" class="bg-emerald-400 h-full w-0 transition-all duration-100"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <div class="flex items-center gap-2 text-[11px] text-slate-600">
+                <span class="font-semibold">Ambang Fokus:</span>
+                <select id="sensitivitas-fokus" class="px-2 py-1 rounded-lg border border-slate-300 bg-white font-semibold">
+                  <option value="8">Cahaya Redup</option>
+                  <option value="11" selected>Normal</option>
+                  <option value="15">Ketat</option>
+                </select>
+              </div>
+              <button type="button" onclick="jepretManualDariStream()" class="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold">
+                Baca Sekarang
+              </button>
+            </div>
+
+            <div id="scan-feedback" class="hidden p-3.5 rounded-xl text-xs font-semibold"></div>
+          </div>
+
+          <div class="lg:col-span-7 space-y-5">
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="material-icons-round text-emerald-600">table_view</span>
+                Unduh Rekap Nilai & Anbuso ke Excel (.xlsx) Per Mapel
+              </h2>
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                <div class="sm:col-span-6">
+                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
+                  <select id="ekspor-pilih-mapel" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"></select>
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">KKTP</label>
+                  <input type="number" id="ekspor-kktp" value="75" class="w-full px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-center">
+                </div>
+                <div class="sm:col-span-4">
+                  <button type="button" onclick="unduhExcelPerMapel()" class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
+                    <span class="material-icons-round text-sm">download</span>
+                    Unduh Excel (.xlsx)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Antrean Hasil Koreksi & Cetak Timpa</h2>
+                  <p class="text-xs text-slate-500">Pilih tema cetakan nilai dan pratinjau lingkaran koreksi sebelum mencetak</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="bukaModalCetak(null)" class="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition">
+                    <span class="material-icons-round text-base">visibility</span>
+                    Tema & Pratinjau
+                  </button>
+                  <button onclick="bukaModalCetak(null)" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5">
+                    <span class="material-icons-round text-base">print</span>
+                    Cetak Semua (<span id="jumlah-antrean">0</span>)
+                  </button>
+                </div>
+              </div>
+
+              <div class="overflow-x-auto max-h-[340px] overflow-y-auto border border-slate-100 rounded-xl">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-900 text-white sticky top-0">
+                    <tr>
+                      <th class="py-2.5 px-3">No</th>
+                      <th class="py-2.5 px-3">Nama & Kelas</th>
+                      <th class="py-2.5 px-3">Nilai</th>
+                      <th class="py-2.5 px-3">Rincian Salah</th>
+                      <th class="py-2.5 px-3 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-antrean" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MODUL 2: KONFIGURASI PAKET SOAL (JUMLAH SOAL DINAMIS & TERENKRIPSI AES-GCM) -->
+      <div id="modul-config" class="hidden space-y-6">
+        <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Konfigurasi Paket Soal & Kunci Jawaban</h2>
+              <p class="text-xs text-slate-500">Atur jumlah soal, tipe PG/MCMA, dan bobot poin (dienkripsi dengan PIN Anda)</p>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs">
+              <span>Total Soal: <strong id="cfg-count-total" class="text-white">40</strong></span>
+              <span class="text-slate-600">|</span>
+              <span>PG: <strong id="cfg-count-pg" class="text-teal-300">30</strong></span>
+              <span class="text-slate-600">|</span>
+              <span>MCMA: <strong id="cfg-count-mcma" class="text-emerald-300">10</strong></span>
+              <span id="cfg-badge-total" class="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Total: 100 Poin</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 mt-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
+              <input type="text" id="cfg-mapel" placeholder="Misal: Geografi" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Paket / Kelas</label>
+              <input type="text" id="cfg-nama-paket" placeholder="Misal: Kelas X - A" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Soal (1-100)</label>
+              <input type="number" id="cfg-jumlah-soal" min="1" max="100" value="40" onchange="ubahJumlahSoalConfig()" class="w-full px-3 py-2 rounded-xl border border-teal-400 bg-teal-50/40 text-sm font-extrabold text-teal-900">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Jenjang</label>
+              <select id="cfg-jenjang" onchange="ubahJenjangConfig()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+                <option value="SMA">SMA (Opsi A - E)</option>
+                <option value="SMP">SMP (Opsi A - D)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Aturan Skor MCMA</label>
+              <select id="cfg-aturan-mcma" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+                <option value="PARSIAL">Parsial Anti-Tebak</option>
+                <option value="MUTLAK">Mutlak (Harus Tepat)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Posisi Cetak Atas (mm)</label>
+              <input type="number" id="cfg-offset-top" value="52" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold">
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="terapkanPresetMcmaAkhir()" class="px-3 py-1.5 rounded-lg bg-slate-100 font-semibold">Preset MCMA 25% Akhir</button>
+              <button type="button" onclick="autoKalibrasiConfig()" class="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 font-semibold">Kalibrasi ke 100</button>
+            </div>
+            <button type="button" onclick="simpanPaketConfig()" class="px-5 py-2.5 rounded-xl bg-teal-600 text-white font-bold flex items-center gap-1.5">
+              <span class="material-icons-round text-base">lock</span>
+              Enkripsi & Simpan Paket
+            </button>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="cfg-grid-soal"></section>
+      </div>
+
+      <!-- MODUL 3: ANALISIS BUTIR SOAL (ANBUSO) -->
+      <div id="modul-anbuso" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <select id="anb-pilih-paket" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"></select>
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+              <span>KKTP:</span>
+              <input type="number" id="anb-kktp" value="75" class="w-14 px-2 py-1.5 rounded-lg border border-slate-300 text-center font-bold">
+            </div>
+            <button onclick="jalankanAnbuso()" class="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center gap-1.5">
+              <span class="material-icons-round text-base">analytics</span>
+              Hitung Analisis
+            </button>
+          </div>
+          <div id="anb-status" class="text-xs font-semibold text-slate-500">Siap menganalisis data ujian.</div>
+        </div>
+
+        <div id="anb-hasil-container" class="hidden space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Reliabilitas (Alpha)</div>
+              <div class="text-2xl font-extrabold text-slate-900 mt-1" id="anb-alpha">0.00</div>
+              <div class="text-xs font-semibold text-teal-700 mt-1" id="anb-alpha-ket">-</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Rata-Rata Kelas</div>
+              <div class="text-2xl font-extrabold text-slate-900 mt-1" id="anb-rata">0.0</div>
+              <div class="text-xs text-slate-500 mt-1" id="anb-sebaran">Min: 0 | Max: 0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Ketuntasan KKTP</div>
+              <div class="text-2xl font-extrabold text-slate-900 mt-1" id="anb-tuntas">0%</div>
+              <div class="text-xs text-slate-500 mt-1" id="anb-tuntas-det">0 siswa tuntas</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Kualitas Butir</div>
+              <div class="flex gap-1.5 mt-2 text-xs font-bold">
+                <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800" id="anb-jml-baik">0 Baik</span>
+                <span class="px-2 py-1 rounded bg-amber-100 text-amber-800" id="anb-jml-revisi">0 Revisi</span>
+                <span class="px-2 py-1 rounded bg-rose-100 text-rose-800" id="anb-jml-tolak">0 Ganti</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 bg-slate-900 text-white text-xs font-bold">Analisis Kualitas Butir Soal & Sebaran Pengecoh</div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-100 text-slate-700 font-bold">
+                  <tr>
+                    <th class="py-2.5 px-4">No</th>
+                    <th class="py-2.5 px-3">Tipe & Kunci</th>
+                    <th class="py-2.5 px-3">Kesukaran (P)</th>
+                    <th class="py-2.5 px-3">Daya Pembeda (D)</th>
+                    <th class="py-2.5 px-4">Sebaran Jawaban Siswa</th>
+                    <th class="py-2.5 px-4">Rekomendasi</th>
+                  </tr>
+                </thead>
+                <tbody id="anb-tbody-soal" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 bg-slate-900 text-white text-xs font-bold">Profil Diagnostik Pemahaman Siswa</div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-100 text-slate-700 font-bold">
+                  <tr>
+                    <th class="py-2.5 px-4">Rank</th>
+                    <th class="py-2.5 px-4">Nama Siswa</th>
+                    <th class="py-2.5 px-3">Kelas</th>
+                    <th class="py-2.5 px-3">Nilai</th>
+                    <th class="py-2.5 px-3">Status</th>
+                    <th class="py-2.5 px-4">Nomor Soal Belum Tuntas</th>
+                  </tr>
+                </thead>
+                <tbody id="anb-tbody-siswa" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="print-area"></div>
+
+  <script>
+    let authMode = "login";
+    let authToken = sessionStorage.getItem("asas_token") || "";
+    let userProfile = JSON.parse(sessionStorage.getItem("asas_user") || "null");
+    let userPin = sessionStorage.getItem("asas_pin") || "";
+
+    let daftarPaketDecrypted = [];
+    let antreanHasilGlobal = [];
+    let opsiConfig = ["A", "B", "C", "D", "E"];
+    let dataSoalConfig = Array.from({ length: 40 }, (_, i) => ({
+      no: i + 1, tipe: i >= 30 ? "MCMA" : "PG", bobot: i >= 30 ? 4 : 2, kunci: []
+    }));
+
+    function getPaketAktifObj(idPaket) {
+      return daftarPaketDecrypted.find(p => p.idPaket === idPaket) || null;
+    }
+
+    let mediaStream = null, scanLoopTimer = null, scannerState = "IDLE", prevGrayFrame = null, steadyTickCount = 0;
+    const REQUIRED_STEADY_TICKS = 10;
+    const analysisCanvas = document.createElement("canvas");
+    analysisCanvas.width = 160; analysisCanvas.height = 120;
+    const analysisCtx = analysisCanvas.getContext("2d", { willReadFrequently: true });
+
+    window.onload = function() {
+      renderMatriksConfig();
+      if (authToken && userProfile && userPin) {
+        masukKeAplikasi();
+      }
+    };
+
+    async function deriveAesKey(pin, saltHex) {
+      const enc = new TextEncoder();
+      const saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function enkripsiDataSoal(objSoal, pin, saltHex) {
+      const key = await deriveAesKey(pin, saltHex);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encoded = new TextEncoder().encode(JSON.stringify(objSoal));
+      const cipherBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+      return {
+        encryptedSoal: btoa(String.fromCharCode(...new Uint8Array(cipherBuf))),
+        iv: btoa(String.fromCharCode(...iv))
+      };
+    }
+
+    async function dekripsiDataSoal(encryptedBase64, ivBase64, pin, saltHex) {
+      const key = await deriveAesKey(pin, saltHex);
+      const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+      const cipherBytes = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+      const plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipherBytes);
+      return JSON.parse(new TextDecoder().decode(plainBuf));
+    }
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      document.getElementById("auth-nama-box").classList.toggle("hidden", mode === "login");
+      document.getElementById("tab-auth-login").className = mode === "login" ? "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm" : "flex-1 py-2 rounded-lg text-slate-500";
+      document.getElementById("tab-auth-reg").className = mode === "register" ? "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm" : "flex-1 py-2 rounded-lg text-slate-500";
+      document.getElementById("btn-auth-submit").textContent = mode === "login" ? "Masuk ke Ruang Kerja" : "Buat Akun Guru";
+    }
+
+    async function submitAuth() {
+      const nama = document.getElementById("auth-nama").value;
+      const email = document.getElementById("auth-email").value;
+      const password = document.getElementById("auth-password").value;
+      const pin = document.getElementById("auth-pin").value;
+
+      if (!email || !password || !pin) return alert("Email, password, dan PIN Enkripsi wajib diisi.");
+
+      const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nama, email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || "Gagal autentikasi.");
+
+      authToken = data.token;
+      userProfile = data.user;
+      userPin = pin;
+
+      sessionStorage.setItem("asas_token", authToken);
+      sessionStorage.setItem("asas_user", JSON.stringify(userProfile));
+      sessionStorage.setItem("asas_pin", userPin);
+
+      masukKeAplikasi();
+    }
+
+    function masukKeAplikasi() {
+      document.getElementById("auth-screen").classList.add("hidden");
+      document.getElementById("main-app").classList.remove("hidden");
+      document.getElementById("user-display-label").textContent = `${userProfile.nama} (${userProfile.email})`;
+      document.getElementById("ocr-mode-select").value = localStorage.getItem("asas_ocr_mode") || "SIMULASI";
+      document.getElementById("ocr-api-key-input").value = localStorage.getItem("asas_ocr_key") || "";
+      muatDaftarPaket();
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      location.reload();
+    }
+
+    function bukaModalOcr() { document.getElementById("modal-ocr").classList.remove("hidden"); }
+    function tutupModalOcr() { document.getElementById("modal-ocr").classList.add("hidden"); }
+    function simpanSettingOcr() {
+      localStorage.setItem("asas_ocr_mode", document.getElementById("ocr-mode-select").value);
+      localStorage.setItem("asas_ocr_key", document.getElementById("ocr-api-key-input").value.trim());
+      alert("Pengaturan OCR tersimpan di browser Anda.");
+      tutupModalOcr();
+    }
+
+    function bukaModul(nama) {
+      if (nama !== "scan" && mediaStream) matikanKamera();
+      ["scan", "config", "anbuso"].forEach(m => {
+        document.getElementById("modul-" + m).classList.add("hidden");
+        document.getElementById("nav-" + m).className = "px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition";
+      });
+      document.getElementById("modul-" + nama).classList.remove("hidden");
+      document.getElementById("nav-" + nama).className = "px-3.5 py-2 rounded-lg text-xs font-bold bg-teal-600 text-white flex items-center gap-1.5 transition";
+    }
+
+    async function muatDaftarPaket(pilihId = null) {
+      const res = await fetch("/api/paket", { headers: { "Authorization": "Bearer " + authToken } });
+      if (res.status === 401) return logout();
+      const rows = await res.json();
+
+      daftarPaketDecrypted = [];
+      for (const r of rows) {
+        try {
+          const daftarSoal = await dekripsiDataSoal(r.encrypted_soal, r.iv, userPin, userProfile.saltKunci);
+          daftarPaketDecrypted.push({
+            idPaket: r.id,
+            mapel: r.mapel,
+            namaPaket: r.nama_paket,
+            jenjang: r.jenjang,
+            aturanMcma: r.aturan_mcma,
+            offsetTop: r.offset_top,
+            daftarSoal: daftarSoal
+          });
+        } catch (e) {}
+      }
+
+      const optHtml = daftarPaketDecrypted.length > 0
+        ? daftarPaketDecrypted.map(p => `<option value="${p.idPaket}">[${p.mapel}] ${p.namaPaket} (${p.daftarSoal.length} Soal - ${p.jenjang})</option>`).join("")
+        : `<option value="">Belum ada paket soal (Buat di Tab 2)</option>`;
+
+      document.getElementById("scan-pilih-paket").innerHTML = optHtml;
+      document.getElementById("anb-pilih-paket").innerHTML = optHtml;
+
+      const mapelUnik = [...new Set(daftarPaketDecrypted.map(p => p.mapel))];
+      document.getElementById("ekspor-pilih-mapel").innerHTML = mapelUnik.length > 0
+        ? mapelUnik.map(m => `<option value="${m}">${m}</option>`).join("")
+        : `<option value="">Belum ada mapel</option>`;
+
+      if (pilihId) {
+        document.getElementById("scan-pilih-paket").value = pilihId;
+        document.getElementById("anb-pilih-paket").value = pilihId;
+      }
+      muatAntreanHasil();
+    }
+
+    async function simpanPaketConfig() {
+      const mapel = document.getElementById("cfg-mapel").value.trim();
+      const namaPaket = document.getElementById("cfg-nama-paket").value.trim();
+      if (!mapel || !namaPaket) return alert("Isi mata pelajaran dan nama paket.");
+      const kosong = dataSoalConfig.filter(s => s.kunci.length === 0).map(s => s.no);
+      if (kosong.length > 0) return alert("Kunci belum diisi pada nomor: " + kosong.join(", "));
+
+      const { encryptedSoal, iv } = await enkripsiDataSoal(dataSoalConfig, userPin, userProfile.saltKunci);
+
+      const res = await fetch("/api/paket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+        body: JSON.stringify({
+          mapel,
+          namaPaket,
+          jenjang: document.getElementById("cfg-jenjang").value,
+          aturanMcma: document.getElementById("cfg-aturan-mcma").value,
+          offsetTop: Number(document.getElementById("cfg-offset-top").value) || 52,
+          encryptedSoal,
+          iv
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Paket soal (${dataSoalConfig.length} soal) berhasil dienkripsi dan disimpan!`);
+        await muatDaftarPaket(data.id);
+        bukaModul("scan");
+      }
+    }
+
+    async function toggleKamera() {
+      if (mediaStream) matikanKamera();
+      else await nyalakanKamera();
+    }
+
+    async function nyalakanKamera() {
+      const idPaket = document.getElementById("scan-pilih-paket").value;
+      if (!idPaket) return alert("Buat atau pilih paket soal terlebih dahulu.");
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
+        });
+        const videoEl = document.getElementById("live-video");
+        videoEl.srcObject = mediaStream;
+        videoEl.classList.remove("hidden");
+        document.getElementById("cam-placeholder").classList.add("hidden");
+        document.getElementById("viewfinder-overlay").classList.remove("hidden");
+
+        const btn = document.getElementById("btn-toggle-cam");
+        btn.innerHTML = `<span class="material-icons-round text-sm">videocam_off</span> Matikan`;
+        btn.className = "px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-bold flex items-center gap-1";
+
+        scannerState = "SCANNING";
+        steadyTickCount = 0;
+        prevGrayFrame = null;
+        scanLoopTimer = setInterval(analisisFrameKamera, 120);
+      } catch (err) {
+        alert("Gagal mengakses kamera: " + err.message);
+      }
+    }
+
+    function matikanKamera() {
+      if (scanLoopTimer) clearInterval(scanLoopTimer);
+      scanLoopTimer = null;
+      if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+      scannerState = "IDLE";
+      document.getElementById("live-video").classList.add("hidden");
+      document.getElementById("cam-placeholder").classList.remove("hidden");
+      document.getElementById("viewfinder-overlay").classList.add("hidden");
+
+      const btn = document.getElementById("btn-toggle-cam");
+      btn.innerHTML = `<span class="material-icons-round text-sm">videocam</span> Nyalakan`;
+      btn.className = "px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center gap-1";
+    }
+
+    function analisisFrameKamera() {
+      const videoEl = document.getElementById("live-video");
+      if (!videoEl || videoEl.readyState < 2 || scannerState === "PROCESSING") return;
+
+      const w = analysisCanvas.width, h = analysisCanvas.height;
+      analysisCtx.drawImage(videoEl, 0, 0, w, h);
+      const imgData = analysisCtx.getImageData(0, 0, w, h).data;
+
+      const currentGray = new Float32Array(w * h);
+      let edgeEnergySum = 0, edgeSamples = 0, motionDiffSum = 0, motionSamples = 0;
+
+      for (let y = 15; y < h - 15; y++) {
+        for (let x = 20; x < w - 20; x++) {
+          const idx = (y * w + x) * 4;
+          const gray = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+          const pIdx = y * w + x;
+          currentGray[pIdx] = gray;
+          if (x > 20 && y > 15) {
+            edgeEnergySum += Math.abs(gray - currentGray[pIdx - 1]) + Math.abs(gray - currentGray[pIdx - w]);
+            edgeSamples++;
+          }
+          if (prevGrayFrame) {
+            motionDiffSum += Math.abs(gray - prevGrayFrame[pIdx]);
+            motionSamples++;
+          }
+        }
+      }
+
+      prevGrayFrame = currentGray;
+      const sharpness = edgeSamples > 0 ? edgeEnergySum / edgeSamples : 0;
+      const motion = motionSamples > 0 ? motionDiffSum / motionSamples : 99;
+      const sharpThreshold = Number(document.getElementById("sensitivitas-fokus").value) || 11;
+
+      const badge = document.getElementById("focus-badge");
+      const guideBox = document.getElementById("guide-box");
+      const progressBar = document.getElementById("focus-progress");
+
+      if (scannerState === "WAITING_SWAP") {
+        if (motion > 14) {
+          scannerState = "SCANNING";
+          steadyTickCount = 0;
+          badge.textContent = "Kertas baru terdeteksi, menstabilkan fokus...";
+        }
+        return;
+      }
+
+      if (sharpness >= sharpThreshold && motion < 5.5) {
+        steadyTickCount++;
+        const pct = Math.min(100, Math.round((steadyTickCount / REQUIRED_STEADY_TICKS) * 100));
+        progressBar.style.width = pct + "%";
+        guideBox.className = "w-full h-[78%] border-2 border-emerald-400 rounded-xl relative";
+        badge.textContent = `Fokus terkunci (${pct}%) - Tahan sebentar...`;
+        if (steadyTickCount >= REQUIRED_STEADY_TICKS) eksekusiTangkapInMemory();
+      } else {
+        steadyTickCount = Math.max(0, steadyTickCount - 2);
+        progressBar.style.width = Math.round((steadyTickCount / REQUIRED_STEADY_TICKS) * 100) + "%";
+        guideBox.className = "w-full h-[78%] border-2 border-dashed border-white/50 rounded-xl relative";
+        badge.textContent = motion >= 5.5 ? "Tahan posisi HP agar tidak goyang..." : "Memfokuskan tabel jawaban...";
+      }
+    }
+
+    function jepretManualDariStream() {
+      if (!mediaStream) return alert("Nyalakan kamera terlebih dahulu.");
+      if (scannerState !== "PROCESSING") eksekusiTangkapInMemory();
+    }
+
+    function bunyikanBeepSukses() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    async function eksekusiTangkapInMemory() {
+      const videoEl = document.getElementById("live-video");
+      const idPaket = document.getElementById("scan-pilih-paket").value;
+      const paket = getPaketAktifObj(idPaket);
+      if (!videoEl || !paket) return;
+
+      scannerState = "PROCESSING";
+      bunyikanBeepSukses();
+      if (navigator.vibrate) navigator.vibrate(80);
+
+      const badge = document.getElementById("focus-badge");
+      badge.textContent = "Membaca lembar jawaban...";
+
+      const capCanvas = document.createElement("canvas");
+      const maxW = 1440;
+      const scale = videoEl.videoWidth > maxW ? maxW / videoEl.videoWidth : 1;
+      capCanvas.width = videoEl.videoWidth * scale;
+      capCanvas.height = videoEl.videoHeight * scale;
+      capCanvas.getContext("2d").drawImage(videoEl, 0, 0, capCanvas.width, capCanvas.height);
+      const base64Data = capCanvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+
+      const modeOcr = localStorage.getItem("asas_ocr_mode") || "SIMULASI";
+      const apiKey = localStorage.getItem("asas_ocr_key") || "";
+
+      const fb = document.getElementById("scan-feedback");
+      fb.className = "p-3.5 rounded-xl text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200";
+      fb.textContent = "Mengekstrak jawaban & menghitung skor...";
+      fb.classList.remove("hidden");
+
+      try {
+        let hasilOcr = null;
+        if (modeOcr === "SIMULASI") {
+          const opsi = paket.jenjang === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
+          const namaDummy = ["Ahmad Fauzi", "Nabila Putri", "Rizky Pratama", "Aisyah Rahma", "Dimas Saputra"];
+          const jawSim = {};
+          paket.daftarSoal.forEach(s => {
+            jawSim["no_" + s.no] = Math.random() < 0.75 ? s.kunci.join(", ") : opsi[Math.floor(Math.random() * opsi.length)];
+          });
+          hasilOcr = {
+            identitas: { nama_siswa: namaDummy[Math.floor(Math.random() * namaDummy.length)] + " (Simulasi)", kelas: paket.jenjang === "SMA" ? "X-A" : "VII-A" },
+            jawaban_pg: jawSim
+          };
+        } else {
+          const ocrRes = await fetch("/api/ocr-proxy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+            body: JSON.stringify({ modeOcr, apiKey, base64Image: base64Data, jenjang: paket.jenjang, jumlahSoal: paket.daftarSoal.length })
+          });
+          hasilOcr = await ocrRes.json();
+          if (!ocrRes.ok) throw new Error(hasilOcr.error || "Gagal membaca foto.");
+        }
+
+        const penilaian = hitungKoreksiDiBrowser(hasilOcr, paket);
+
+        await fetch("/api/hasil", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+          body: JSON.stringify({ paketId: paket.idPaket, ...penilaian })
+        });
+
+        document.getElementById("focus-progress").style.width = "0%";
+        steadyTickCount = 0;
+        fb.className = "p-3.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
+        fb.textContent = `Terekam: ${penilaian.namaSiswa} (${penilaian.kelas}) | Nilai: ${penilaian.nilaiAkhir}`;
+        muatAntreanHasil();
+
+        scannerState = "WAITING_SWAP";
+        badge.textContent = "Selesai! Geser ke lembar berikutnya...";
+      } catch (err) {
+        document.getElementById("focus-progress").style.width = "0%";
+        steadyTickCount = 0;
+        fb.className = "p-3.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200";
+        fb.textContent = err.message;
+        scannerState = "SCANNING";
+      }
+    }
+
+    function hitungKoreksiDiBrowser(hasilOcr, paket) {
+      const jawabanObj = hasilOcr.jawaban_pg || {};
+      let totalNilai = 0, daftarSalahCetak = [], skorPerSoal = [], pointerNomor = [];
+
+      paket.daftarSoal.forEach(item => {
+        const rawJawab = jawabanObj["no_" + item.no];
+        if (!rawJawab || typeof rawJawab === "object") {
+          pointerNomor.push(item.no);
+          skorPerSoal.push(0);
+          daftarSalahCetak.push(`${item.no}(Kosong->${item.kunci.join(",")})`);
+          return;
+        }
+        const jawabArr = [...new Set(String(rawJawab).toUpperCase().split(",").map(s => s.trim()).filter(Boolean))].sort();
+        const kunciArr = [...item.kunci].map(s => s.toUpperCase().trim()).sort();
+
+        if (item.tipe === "PG") {
+          if (jawabArr.length === 1 && jawabArr[0] === kunciArr[0]) {
+            totalNilai += item.bobot;
+            skorPerSoal.push(item.bobot);
+          } else {
+            skorPerSoal.push(0);
+            daftarSalahCetak.push(`${item.no}(${jawabArr.join(",")}->${kunciArr.join(",")})`);
+          }
+        } else {
+          const adaSalah = jawabArr.some(o => !kunciArr.includes(o));
+          if (adaSalah || jawabArr.length === 0) {
+            skorPerSoal.push(0);
+            daftarSalahCetak.push(`${item.no}(${jawabArr.join(",")}->${kunciArr.join(",")})`);
+          } else if (paket.aturanMcma === "MUTLAK") {
+            if (jawabArr.length === kunciArr.length) {
+              totalNilai += item.bobot;
+              skorPerSoal.push(item.bobot);
+            } else {
+              skorPerSoal.push(0);
+              daftarSalahCetak.push(`${item.no}(${jawabArr.join(",")}->${kunciArr.join(",")})`);
+            }
+          } else {
+            const skorParsial = Math.round(((jawabArr.length / kunciArr.length) * item.bobot) * 100) / 100;
+            totalNilai += skorParsial;
+            skorPerSoal.push(skorParsial);
+            if (jawabArr.length < kunciArr.length) daftarSalahCetak.push(`${item.no}(${jawabArr.join(",")}->${kunciArr.join(",")})`);
+          }
+        }
+      });
+
+      return {
+        namaSiswa: hasilOcr.identitas?.nama_siswa || "Tanpa Nama",
+        kelas: hasilOcr.identitas?.kelas || "-",
+        nilaiAkhir: Math.round(totalNilai * 10) / 10,
+        statusValidasi: pointerNomor.length > 0 ? "Cek No: " + pointerNomor.join(",") : "Valid",
+        ringkasanCetak: daftarSalahCetak.length > 0 ? "Koreksi: " + daftarSalahCetak.join(", ") : "Sempurna (Semua Benar)",
+        rawJawaban: jawabanObj,
+        skorPerSoal: skorPerSoal
+      };
+    }
+
+    async function muatAntreanHasil() {
+      const idPaket = document.getElementById("scan-pilih-paket").value;
+      if (!idPaket) return;
+      const paket = getPaketAktifObj(idPaket);
+      if (paket) document.getElementById("ekspor-pilih-mapel").value = paket.mapel;
+
+      const res = await fetch(`/api/hasil/paket/${idPaket}`, { headers: { "Authorization": "Bearer " + authToken } });
+      const rows = await res.json();
+      antreanHasilGlobal = rows.map(r => ({
+        nama: r.nama_siswa,
+        kelas: r.kelas,
+        nilaiAkhir: Number(r.nilai_akhir) || 0,
+        statusValidasi: r.status_validasi,
+        ringkasanCetak: r.ringkasan_cetak,
+        rawJawaban: JSON.parse(r.raw_jawaban_json || "{}"),
+        skorPerSoal: JSON.parse(r.skor_per_soal_json || "[]"),
+        offsetTop: paket ? paket.offsetTop : 52
+      }));
+      document.getElementById("jumlah-antrean").textContent = antreanHasilGlobal.length;
+
+      const tbody = document.getElementById("tbody-antrean");
+      if (antreanHasilGlobal.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Belum ada lembar jawaban dipindai.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = antreanHasilGlobal.map((item, idx) => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2.5 px-3 font-bold">${idx + 1}</td>
+          <td class="py-2.5 px-3">
+            <div class="font-bold text-slate-900">${item.nama}</div>
+            <div class="text-[11px] text-slate-500">${item.kelas} | ${item.statusValidasi}</div>
+          </td>
+          <td class="py-2.5 px-3 font-extrabold text-teal-700 text-sm">${item.nilaiAkhir}</td>
+          <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-xs truncate">${item.ringkasanCetak}</td>
+          <td class="py-2.5 px-3 text-right">
+            <button onclick="bukaModalCetak([${idx}])" class="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">Pratinjau & Print</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+
+    /* =====================================================================
+       ENGINE TEMA CETAK TIMPA, LINGKARAN KUNCI & PRATINJAU INTERAKTIF A4
+       ===================================================================== */
+    let temaCetakAktif = localStorage.getItem("asas_tema_cetak") || "classic";
+    let targetCetakIndices = null; // null = semua antrean, atau array [idx]
+
+    function bukaModalCetak(indices = null) {
+      targetCetakIndices = indices;
+      const idPaket = document.getElementById("scan-pilih-paket").value;
+      const pkt = getPaketAktifObj(idPaket);
+      if (pkt && pkt.offsetTop) {
+        document.getElementById("prev-offset-top").value = pkt.offsetTop;
+      }
+
+      const jmlCetak = indices ? indices.length : antreanHasilGlobal.length;
+      document.getElementById("btn-modal-print-label").textContent = jmlCetak > 0
+        ? `Cetak Timpa (${jmlCetak} Lembar A4)`
+        : "Cetak Contoh Pratinjau (1 Lembar)";
+
+      pilihTemaCetak(temaCetakAktif);
+      document.getElementById("modal-cetak-preview").classList.remove("hidden");
+    }
+
+    function tutupModalCetak() {
+      document.getElementById("modal-cetak-preview").classList.add("hidden");
+    }
+
+    function pilihTemaCetak(namaTema) {
+      temaCetakAktif = namaTema;
+      localStorage.setItem("asas_tema_cetak", namaTema);
+      ["classic", "circle", "minimal", "card"].forEach(t => {
+        const btn = document.getElementById("tema-btn-" + t);
+        if (!btn) return;
+        btn.className = t === namaTema
+          ? "p-2.5 rounded-xl border-2 border-teal-600 bg-teal-50/60 text-left transition"
+          : "p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition";
+      });
+      renderPratinjauCetak();
+    }
+
+    function terapkanPresetLjk() {
+      const preset = document.getElementById("prev-ljk-preset").value;
+      if (preset === "2col") {
+        document.getElementById("prev-ljk-top").value = 98;
+        document.getElementById("prev-ljk-left").value = 34;
+        document.getElementById("prev-ljk-rowh").value = 7.5;
+        document.getElementById("prev-ljk-colw").value = 85;
+        document.getElementById("prev-ljk-optgap").value = 8.5;
+      } else if (preset === "4col") {
+        document.getElementById("prev-ljk-top").value = 105;
+        document.getElementById("prev-ljk-left").value = 22;
+        document.getElementById("prev-ljk-rowh").value = 8.0;
+        document.getElementById("prev-ljk-colw").value = 46;
+        document.getElementById("prev-ljk-optgap").value = 6.2;
+      } else {
+        document.getElementById("prev-ljk-top").value = 95;
+        document.getElementById("prev-ljk-left").value = 45;
+        document.getElementById("prev-ljk-rowh").value = 6.5;
+        document.getElementById("prev-ljk-colw").value = 120;
+        document.getElementById("prev-ljk-optgap").value = 10.0;
+      }
+      renderPratinjauCetak();
+    }
+
+    function ambilOpsiCetakSaatIni() {
+      const preset = document.getElementById("prev-ljk-preset").value;
+      const cols = preset === "4col" ? 4 : (preset === "1col" ? 1 : 2);
+      return {
+        tema: temaCetakAktif,
+        offsetTop: Number(document.getElementById("prev-offset-top").value) || 52,
+        warnaTinta: document.getElementById("prev-warna-tinta").value || "#dc2626",
+        lingkarGrid: document.getElementById("prev-aktif-lingkar-grid").checked,
+        ringkasanAtas: document.getElementById("prev-aktif-ringkasan-atas").checked,
+        ljkCols: cols,
+        ljkTop: Number(document.getElementById("prev-ljk-top").value) || 98,
+        ljkLeft: Number(document.getElementById("prev-ljk-left").value) || 34,
+        ljkRowH: Number(document.getElementById("prev-ljk-rowh").value) || 7.5,
+        ljkColW: Number(document.getElementById("prev-ljk-colw").value) || 85,
+        ljkOptGap: Number(document.getElementById("prev-ljk-optgap").value) || 8.5
+      };
+    }
+
+    function evaluasiItemSiswaUntukCetak(itemSiswa, paket) {
+      const soalList = paket ? paket.daftarSoal : dataSoalConfig;
+      const rawJawab = itemSiswa.rawJawaban || {};
+      const skorList = itemSiswa.skorPerSoal || [];
+      let jumlahBenar = 0;
+      let detailSalah = [];
+
+      soalList.forEach((soal, idx) => {
+        const skor = skorList[idx] !== undefined ? Number(skorList[idx]) : soal.bobot;
+        const jawStr = rawJawab["no_" + soal.no] || "";
+        if (skor >= soal.bobot) {
+          jumlahBenar++;
+        } else {
+          detailSalah.push({
+            no: soal.no,
+            tipe: soal.tipe,
+            kunci: soal.kunci,
+            jawabanSiswa: jawStr ? String(jawStr) : "Kosong"
+          });
+        }
+      });
+
+      return {
+        totalSoal: soalList.length,
+        jumlahBenar: jumlahBenar,
+        jumlahSalah: soalList.length - jumlahBenar,
+        detailSalah: detailSalah,
+        jenjang: paket ? paket.jenjang : "SMA"
+      };
+    }
+
+    function buatHtmlSatuKertas(itemSiswa, paket, cfg, scaleFactor = 1) {
+      const u = (mm) => scaleFactor === 1 ? `${mm}mm` : `${Math.round(mm * scaleFactor * 10) / 10}px`;
+      const fSize = (pt) => scaleFactor === 1 ? `${pt}pt` : `${Math.round(pt * 0.72 * 10) / 10}px`;
+
+      const evalData = evaluasiItemSiswaUntukCetak(itemSiswa, paket);
+      const nilai = itemSiswa.nilaiAkhir;
+      const statusLulus = nilai >= 75 ? "TUNTAS" : "REMEDIAL";
+      const warna = cfg.warnaTinta;
+
+      // 1. Render Kotak Angka Nilai Sesuai Tema
+      let stampHtml = "";
+      if (cfg.tema === "circle") {
+        const diam = scaleFactor === 1 ? "21mm" : "44px";
+        stampHtml = `
+          <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; width: ${diam}; height: ${diam}; border-radius: 9999px; border: 2px double ${warna}; color: ${warna}; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <span style="font-size: ${fSize(6.5)}; font-weight: 800; letter-spacing: 0.5px;">NILAI</span>
+            <span style="font-size: ${fSize(15)}; font-weight: 900; line-height: 1.05;">${nilai}</span>
+          </div>`;
+      } else if (cfg.tema === "minimal") {
+        stampHtml = `
+          <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; border-bottom: 2.5px double ${warna}; color: ${warna}; padding: 1px 6px 2px 6px; text-align: center;">
+            <div style="font-size: ${fSize(6.5)}; font-weight: 700; text-transform: uppercase;">Skor Akhir</div>
+            <div style="font-size: ${fSize(17)}; font-weight: 900; line-height: 1.05;">${nilai}</div>
+          </div>`;
+      } else if (cfg.tema === "card") {
+        stampHtml = `
+          <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; border: 1.5px solid ${warna}; border-left: 4px solid ${warna}; background: #fff; padding: ${scaleFactor === 1 ? '2mm 3mm' : '3px 6px'}; border-radius: 4px; color: #0f172a;">
+            <div style="display: flex; align-items: baseline; gap: 6px;">
+              <span style="font-size: ${fSize(15)}; font-weight: 900; color: ${warna}; line-height: 1;">${nilai}</span>
+              <span style="font-size: ${fSize(6.5)}; font-weight: 800; padding: 1px 4px; border: 1px solid ${warna}; border-radius: 3px; color: ${warna};">${statusLulus}</span>
+            </div>
+            <div style="font-size: ${fSize(6.5)}; font-weight: 700; margin-top: 2px; color: #334155;">
+              Benar: ${evalData.jumlahBenar} | Salah: ${evalData.jumlahSalah}
+            </div>
+          </div>`;
+      } else {
+        stampHtml = `
+          <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; border: 1.8px solid ${warna}; background: #fff; padding: ${scaleFactor === 1 ? '1.5mm 3.5mm' : '3px 7px'}; text-align: center; color: ${warna};">
+            <div style="font-size: ${fSize(6.5)}; font-weight: 800; border-bottom: 1px solid ${warna}; padding-bottom: 1px; margin-bottom: 1px;">NILAI ASAS</div>
+            <div style="font-size: ${fSize(16)}; font-weight: 900; line-height: 1.1;">${nilai}</div>
+          </div>`;
+      }
+
+      // 2. Render Ringkasan Nomor Salah di Atas (Dengan Lingkaran pada Kunci Jawaban Benar)
+      let ringkasanHtml = "";
+      if (cfg.ringkasanAtas) {
+        let isiKoreksi = "";
+        if (evalData.detailSalah.length === 0) {
+          isiKoreksi = `<span style="color: #059669; font-weight: 800;">Sempurna (Semua Jawaban Benar)</span>`;
+        } else {
+          const itemBadges = evalData.detailSalah.map(s => {
+            const kunciCircled = s.kunci.map(k =>
+              `<span style="display:inline-flex; align-items:center; justify-content:center; width:${scaleFactor === 1 ? '3.6mm' : '11px'}; height:${scaleFactor === 1 ? '3.6mm' : '11px'}; border-radius:9999px; border:1.2px solid ${warna}; color:${warna}; font-weight:900; font-size:${fSize(6.5)}; margin:0 1px;">${k}</span>`
+            ).join("");
+            return `<span style="display:inline-block; margin-right: 5px; margin-bottom: 2px;">No.${s.no}: <span style="text-decoration:line-through; opacity:0.75;">${s.jawabanSiswa}</span> &rarr; Kunci ${kunciCircled}</span>`;
+          }).join("");
+          isiKoreksi = `<div style="margin-top: 2px;">${itemBadges}</div>`;
+        }
+
+        ringkasanHtml = `
+          <div style="position: absolute; left: ${u(20)}; right: ${u(52)}; top: ${u(cfg.offsetTop)}; font-size: ${fSize(7.2)}; line-height: 1.3; color: #0f172a; background: rgba(255,255,255,0.92); padding: 2px 4px; border-left: 2px solid ${warna};">
+            <div style="font-weight: 800;">${itemSiswa.nama} (${itemSiswa.kelas}) &bull; Benar ${evalData.jumlahBenar}/${evalData.totalSoal}</div>
+            ${isiKoreksi}
+          </div>`;
+      }
+
+      // 3. Render Lingkaran Langsung di Atas Grid Pilihan Jawaban LJK untuk Nomor yang Salah
+      let lingkaranGridHtml = "";
+      if (cfg.lingkarGrid && evalData.detailSalah.length > 0) {
+        const hurufList = ["A", "B", "C", "D", "E"];
+        const rowsPerCol = Math.ceil(evalData.totalSoal / cfg.ljkCols);
+        const circleDiam = scaleFactor === 1 ? "4.8mm" : "10px";
+
+        evalData.detailSalah.forEach(salah => {
+          const idxSoal = salah.no - 1;
+          const colIdx = Math.floor(idxSoal / rowsPerCol);
+          const rowIdx = idxSoal % rowsPerCol;
+          const yMm = cfg.ljkTop + (rowIdx * cfg.ljkRowH);
+
+          salah.kunci.forEach(hurufBenar => {
+            const optIdx = hurufList.indexOf(hurufBenar.toUpperCase());
+            if (optIdx >= 0) {
+              const xMm = cfg.ljkLeft + (colIdx * cfg.ljkColW) + (optIdx * cfg.ljkOptGap);
+              lingkaranGridHtml += `
+                <div style="position: absolute; left: ${u(xMm)}; top: ${u(yMm)}; width: ${circleDiam}; height: ${circleDiam}; border: 1.6px solid ${warna}; border-radius: 9999px; transform: translate(-50%, -50%); box-sizing: border-box;"></div>`;
+            }
+          });
+        });
+      }
+
+      return stampHtml + ringkasanHtml + lingkaranGridHtml;
+    }
+
+    function renderPratinjauCetak() {
+      const cfg = ambilOpsiCetakSaatIni();
+      const idPaket = document.getElementById("scan-pilih-paket").value;
+      const paket = getPaketAktifObj(idPaket);
+      const totalSoal = paket ? paket.daftarSoal.length : dataSoalConfig.length;
+      const opsiHuruf = (paket ? paket.jenjang : "SMA") === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
+
+      let sampelSiswa = null;
+      if (targetCetakIndices && targetCetakIndices.length > 0 && antreanHasilGlobal[targetCetakIndices[0]]) {
+        sampelSiswa = antreanHasilGlobal[targetCetakIndices[0]];
+      } else if (antreanHasilGlobal.length > 0) {
+        sampelSiswa = antreanHasilGlobal[0];
+      } else {
+        const soalRef = paket ? paket.daftarSoal : dataSoalConfig;
+        const dummyRaw = {};
+        const dummySkor = [];
+        soalRef.forEach((s, idx) => {
+          const kunciUtama = s.kunci.length > 0 ? s.kunci[0] : "A";
+          if (idx === 1 || idx === 4 || idx === 8) {
+            dummyRaw["no_" + s.no] = kunciUtama === "A" ? "B" : "A";
+            dummySkor.push(0);
+          } else {
+            dummyRaw["no_" + s.no] = s.kunci.length > 0 ? s.kunci.join(", ") : "A";
+            dummySkor.push(s.bobot);
+          }
+        });
+        sampelSiswa = {
+          nama: "Nabila Putri (Contoh)",
+          kelas: "X-A",
+          nilaiAkhir: 92.5,
+          rawJawaban: dummyRaw,
+          skorPerSoal: dummySkor
+        };
+      }
+
+      document.getElementById("preview-sample-info").textContent = `Pratinjau: ${sampelSiswa.nama} (${sampelSiswa.kelas})`;
+
+      const scale = 2.1; // 210mm * 2.1 = 441px
+      const rowsPerCol = Math.ceil(totalSoal / cfg.ljkCols);
+      let ghostGrid = `
+        <div style="border-bottom: 1px solid #94a3b8; margin: 16px 24px 8px 24px; padding-bottom: 6px; font-size: 8px; color: #475569; font-weight: 700;">
+          LEMBAR JAWABAN ASESMEN SUMATIF AKHIR SEMESTER (SKETSA KERTAS SISWA)
+        </div>`;
+
+      for (let i = 0; i < totalSoal; i++) {
+        const colIdx = Math.floor(i / rowsPerCol);
+        const rowIdx = i % rowsPerCol;
+        const yPx = (cfg.ljkTop + rowIdx * cfg.ljkRowH) * scale;
+        const xNoPx = (cfg.ljkLeft + colIdx * cfg.ljkColW - 7) * scale;
+        ghostGrid += `<span style="position:absolute; left:${xNoPx}px; top:${yPx}px; transform:translate(-50%,-50%); font-size:6.5px; color:#64748b; font-weight:700;">${i + 1}.</span>`;
+
+        opsiHuruf.forEach((h, oIdx) => {
+          const xOptPx = (cfg.ljkLeft + colIdx * cfg.ljkColW + oIdx * cfg.ljkOptGap) * scale;
+          ghostGrid += `<span style="position:absolute; left:${xOptPx}px; top:${yPx}px; transform:translate(-50%,-50%); font-size:6.5px; color:#64748b;">${h}</span>`;
+        });
+      }
+
+      document.getElementById("a4-ghost-sheet").innerHTML = ghostGrid;
+      document.getElementById("a4-overlay-layer").innerHTML = buatHtmlSatuKertas(sampelSiswa, paket, cfg, scale);
+    }
+
+    function eksekusiPrintDariModal() {
+      const cfg = ambilOpsiCetakSaatIni();
+      const idPaket = document.getElementById("scan-pilih-paket").value;
+      const paket = getPaketAktifObj(idPaket);
+
+      let daftarCetak = [];
+      if (targetCetakIndices && targetCetakIndices.length > 0) {
+        daftarCetak = targetCetakIndices.map(i => antreanHasilGlobal[i]).filter(Boolean);
+      } else if (antreanHasilGlobal.length > 0) {
+        daftarCetak = antreanHasilGlobal;
+      } else {
+        const soalRef = paket ? paket.daftarSoal : dataSoalConfig;
+        const dummyRaw = {};
+        const dummySkor = [];
+        soalRef.forEach((s, idx) => {
+          const kunciUtama = s.kunci.length > 0 ? s.kunci[0] : "A";
+          if (idx === 1 || idx === 4) {
+            dummyRaw["no_" + s.no] = kunciUtama === "A" ? "B" : "A";
+            dummySkor.push(0);
+          } else {
+            dummyRaw["no_" + s.no] = s.kunci.length > 0 ? s.kunci.join(", ") : "A";
+            dummySkor.push(s.bobot);
+          }
+        });
+        daftarCetak = [{ nama: "Contoh Siswa", kelas: "X-A", nilaiAkhir: 95, rawJawaban: dummyRaw, skorPerSoal: dummySkor }];
+      }
+
+      document.getElementById("print-area").innerHTML = daftarCetak.map(siswa => `
+        <div class="kertas-siswa">
+          ${buatHtmlSatuKertas(siswa, paket, cfg, 1)}
+        </div>
+      `).join("");
+
+      tutupModalCetak();
+      setTimeout(() => window.print(), 150);
+    }
+
+    /* =====================================================================
+       MANAJEMEN JUMLAH SOAL DINAMIS DI TAB KONFIGURASI
+       ===================================================================== */
+    function ubahJumlahSoalConfig() {
+      let targetJumlah = parseInt(document.getElementById("cfg-jumlah-soal").value, 10);
+      if (isNaN(targetJumlah) || targetJumlah < 1) targetJumlah = 1;
+      if (targetJumlah > 100) {
+        targetJumlah = 100;
+        document.getElementById("cfg-jumlah-soal").value = 100;
+      }
+
+      const panjangLama = dataSoalConfig.length;
+      if (targetJumlah > panjangLama) {
+        for (let i = panjangLama; i < targetJumlah; i++) {
+          dataSoalConfig.push({
+            no: i + 1,
+            tipe: "PG",
+            bobot: 2,
+            kunci: []
+          });
+        }
+      } else if (targetJumlah < panjangLama) {
+        dataSoalConfig = dataSoalConfig.slice(0, targetJumlah);
+      }
+
+      renderMatriksConfig();
+    }
+
+    function terapkanPresetMcmaAkhir() {
+      const total = dataSoalConfig.length;
+      const jmlMcma = Math.max(1, Math.round(total * 0.25));
+      const mulai = total - jmlMcma + 1;
+      dataSoalConfig.forEach(s => {
+        s.tipe = s.no >= mulai ? "MCMA" : "PG";
+        s.bobot = s.tipe === "MCMA" ? 4 : 2;
+        if (s.tipe === "PG" && s.kunci.length > 1) s.kunci = [s.kunci[0]];
+      });
+      renderMatriksConfig();
+    }
+
+
+    async function unduhExcelPerMapel() {
+      const mapel = document.getElementById("ekspor-pilih-mapel").value;
+      const kktp = Number(document.getElementById("ekspor-kktp").value) || 75;
+      if (!mapel) return alert("Pilih mata pelajaran.");
+
+      const res = await fetch(`/api/hasil/mapel/${encodeURIComponent(mapel)}`, { headers: { "Authorization": "Bearer " + authToken } });
+      const dataMapel = await res.json();
+      if (dataMapel.length === 0) return alert("Belum ada data nilai untuk mapel " + mapel);
+
+      const wb = XLSX.utils.book_new();
+      const rowsNilai = dataMapel.map((d, idx) => ({
+        "No": idx + 1,
+        "Nama Siswa": d.nama_siswa,
+        "Kelas": d.kelas,
+        "Paket Soal": d.nama_paket,
+        "Nilai Akhir": d.nilai_akhir,
+        "Status KKTP": d.nilai_akhir >= kktp ? "TUNTAS" : "REMEDIAL",
+        "Rincian Koreksi": d.ringkasan_cetak
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsNilai), "Rekap Nilai");
+
+      const paketMapel = daftarPaketDecrypted.filter(p => p.mapel.toLowerCase() === mapel.toLowerCase());
+      let rowsAnbuso = [];
+      for (const pkt of paketMapel) {
+        const siswaPkt = dataMapel.filter(d => d.paket_id === pkt.idPaket);
+        if (siswaPkt.length >= 2) {
+          const hasilAnb = hitungStatistikAnbuso(pkt, siswaPkt, kktp);
+          hasilAnb.hasilButir.forEach(b => {
+            rowsAnbuso.push({
+              "Paket": pkt.namaPaket,
+              "No": b.no,
+              "Tipe": b.tipe,
+              "Kunci": b.kunci.join(", "),
+              "Kesukaran (P)": b.pIndex,
+              "Kategori P": b.kategoriKesukaran,
+              "Daya Pembeda (D)": b.dIndex,
+              "Kategori D": b.kategoriDayaPembeda,
+              "Keputusan": b.keputusan,
+              "Catatan": b.catatan
+            });
+          });
+        }
+      }
+      if (rowsAnbuso.length > 0) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsAnbuso), "Analisis Butir Soal");
+      }
+
+      XLSX.writeFile(wb, `Rekap_ASAS_${mapel.replace(/\s+/g, "_")}.xlsx`);
+    }
+
+    function renderMatriksConfig() {
+      const container = document.getElementById("cfg-grid-soal");
+      container.innerHTML = "";
+      const setengah = Math.ceil(dataSoalConfig.length / 2);
+      const grupList = [dataSoalConfig.slice(0, setengah), dataSoalConfig.slice(setengah)].filter(g => g.length > 0);
+
+      grupList.forEach(grup => {
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm";
+        let html = `<div class="bg-slate-900 text-white px-4 py-2 text-xs font-bold grid grid-cols-12"><div class="col-span-2">No</div><div class="col-span-3">Tipe</div><div class="col-span-5">Kunci</div><div class="col-span-2 text-right">Poin</div></div><div class="divide-y divide-slate-100">`;
+        grup.forEach(item => {
+          const isMCMA = item.tipe === "MCMA";
+          const btns = opsiConfig.map(h => {
+            const aktif = item.kunci.includes(h);
+            const cls = aktif ? (isMCMA ? "bg-emerald-600 text-white border-emerald-600" : "bg-teal-600 text-white border-teal-600") : "bg-white text-slate-600 border-slate-300";
+            return `<button type="button" onclick="toggleKunciConfig(${item.no}, '${h}')" class="w-7 h-7 rounded-lg border text-xs font-bold ${cls}">${h}</button>`;
+          }).join("");
+          html += `
+            <div class="px-4 py-1.5 grid grid-cols-12 items-center text-xs ${isMCMA ? 'bg-emerald-50/40' : ''}">
+              <div class="col-span-2 font-bold">${item.no}.</div>
+              <div class="col-span-3"><button type="button" onclick="toggleTipeConfig(${item.no})" class="px-2 py-0.5 rounded font-bold border ${isMCMA ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'}">${item.tipe}</button></div>
+              <div class="col-span-5 flex gap-1">${btns}</div>
+              <div class="col-span-2 text-right"><input type="number" step="0.5" value="${item.bobot}" onchange="dataSoalConfig[${item.no - 1}].bobot = parseFloat(this.value)||0; hitungRingkasanConfig();" class="w-12 px-1 py-0.5 text-right font-bold border border-slate-200 rounded"></div>
+            </div>`;
+        });
+        card.innerHTML = html + `</div>`;
+        container.appendChild(card);
+      });
+      hitungRingkasanConfig();
+    }
+
+    function toggleTipeConfig(no) {
+      const s = dataSoalConfig[no - 1];
+      s.tipe = s.tipe === "PG" ? "MCMA" : "PG";
+      s.bobot = s.tipe === "MCMA" ? 4 : 2;
+      if (s.tipe === "PG" && s.kunci.length > 1) s.kunci = [s.kunci[0]];
+      renderMatriksConfig();
+    }
+
+    function toggleKunciConfig(no, h) {
+      const s = dataSoalConfig[no - 1];
+      if (s.tipe === "PG") s.kunci = [h];
+      else s.kunci = s.kunci.includes(h) ? s.kunci.filter(x => x !== h) : [...s.kunci, h].sort();
+      renderMatriksConfig();
+    }
+
+    function ubahJenjangConfig() {
+      const j = document.getElementById("cfg-jenjang").value;
+      opsiConfig = j === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
+      if (j === "SMP") dataSoalConfig.forEach(s => s.kunci = s.kunci.filter(h => h !== "E"));
+      renderMatriksConfig();
+    }
+
+    function autoKalibrasiConfig() {
+      const jmlPG = dataSoalConfig.filter(s => s.tipe === "PG").length;
+      const jmlMCMA = dataSoalConfig.filter(s => s.tipe === "MCMA").length;
+      const totalUnit = jmlPG + jmlMCMA * 2;
+      if (!totalUnit) return;
+      const bPG = Math.round((100 / totalUnit) * 100) / 100;
+      const bMCMA = Math.round((bPG * 2) * 100) / 100;
+      dataSoalConfig.forEach(s => s.bobot = s.tipe === "PG" ? bPG : bMCMA);
+      renderMatriksConfig();
+    }
+
+    function hitungRingkasanConfig() {
+      document.getElementById("cfg-count-total").textContent = dataSoalConfig.length;
+      document.getElementById("cfg-count-pg").textContent = dataSoalConfig.filter(s => s.tipe === "PG").length;
+      document.getElementById("cfg-count-mcma").textContent = dataSoalConfig.filter(s => s.tipe === "MCMA").length;
+      const tot = Math.round(dataSoalConfig.reduce((a, s) => a + s.bobot, 0) * 10) / 10;
+      document.getElementById("cfg-badge-total").textContent = `Total: ${tot} Poin`;
+    }
+
+    async function jalankanAnbuso() {
+      const idPaket = document.getElementById("anb-pilih-paket").value;
+      const kktp = Number(document.getElementById("anb-kktp").value) || 75;
+      const paket = getPaketAktifObj(idPaket);
+      if (!paket) return;
+
+      const res = await fetch(`/api/hasil/paket/${idPaket}`, { headers: { "Authorization": "Bearer " + authToken } });
+      const rows = await res.json();
+      if (rows.length < 2) {
+        document.getElementById("anb-status").textContent = "Minimal dibutuhkan 2 siswa untuk menghitung Anbuso.";
+        return;
+      }
+
+      const anb = hitungStatistikAnbuso(paket, rows, kktp);
+      document.getElementById("anb-status").textContent = `Analisis selesai (${anb.statistikKelas.jumlahSiswa} siswa).`;
+      document.getElementById("anb-hasil-container").classList.remove("hidden");
+
+      const st = anb.statistikKelas;
+      document.getElementById("anb-alpha").textContent = st.reliabilitasAlpha.toFixed(2);
+      document.getElementById("anb-alpha-ket").textContent = st.kategoriAlpha;
+      document.getElementById("anb-rata").textContent = st.rataRata;
+      document.getElementById("anb-sebaran").textContent = `Min: ${st.nilaiTerendah} | Max: ${st.nilaiTertinggi} | SD: ${st.simpanganBaku}`;
+      document.getElementById("anb-tuntas").textContent = st.persenTuntas + "%";
+      document.getElementById("anb-tuntas-det").textContent = `${st.jumlahTuntas} dari ${st.jumlahSiswa} siswa tuntas`;
+
+      document.getElementById("anb-jml-baik").textContent = anb.hasilButir.filter(b => b.keputusan === "Diterima").length + " Baik";
+      document.getElementById("anb-jml-revisi").textContent = anb.hasilButir.filter(b => b.keputusan === "Revisi").length + " Revisi";
+      document.getElementById("anb-jml-tolak").textContent = anb.hasilButir.filter(b => b.keputusan === "Ditolak").length + " Ganti";
+
+      const opsiList = paket.jenjang === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
+      document.getElementById("anb-tbody-soal").innerHTML = anb.hasilButir.map(b => {
+        const pills = opsiList.map(h => {
+          const pct = b.persenOpsi[h] || 0;
+          const cls = b.kunci.includes(h) ? "bg-emerald-600 text-white font-bold" : (pct >= 30 ? "bg-rose-100 text-rose-800 font-bold" : "bg-slate-100 text-slate-600");
+          return `<span class="px-1.5 py-0.5 rounded text-[11px] ${cls}">${h}:${pct}%</span>`;
+        }).join(" ");
+        const badgeKep = b.keputusan === "Diterima" ? "bg-emerald-100 text-emerald-800" : (b.keputusan === "Revisi" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800");
+        return `
+          <tr>
+            <td class="py-2.5 px-4 font-bold">${b.no}.</td>
+            <td class="py-2.5 px-3"><span class="font-bold">${b.tipe}</span> (${b.kunci.join(",")})</td>
+            <td class="py-2.5 px-3 font-semibold">${b.pIndex.toFixed(2)} (${b.kategoriKesukaran})</td>
+            <td class="py-2.5 px-3 font-semibold">${b.dIndex.toFixed(2)} (${b.kategoriDayaPembeda})</td>
+            <td class="py-2.5 px-4 flex flex-wrap gap-1">${pills}</td>
+            <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded-full font-bold ${badgeKep}">${b.keputusan}</span> <span class="text-slate-500 ml-1">${b.catatan}</span></td>
+          </tr>`;
+      }).join("");
+
+      document.getElementById("anb-tbody-siswa").innerHTML = anb.profilSiswa.map(s => `
+        <tr>
+          <td class="py-2 px-4 font-bold">#${s.peringkat}</td>
+          <td class="py-2 px-4 font-bold text-slate-900">${s.nama}</td>
+          <td class="py-2 px-3">${s.kelas}</td>
+          <td class="py-2 px-3 font-extrabold">${s.nilaiAkhir}</td>
+          <td class="py-2 px-3"><span class="px-2 py-0.5 rounded-full font-bold ${s.statusKktp === 'Tuntas' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${s.statusKktp}</span></td>
+          <td class="py-2 px-4 text-slate-600">${s.jumlahSalah > 0 ? `(${s.jumlahSalah} soal): No. ${s.daftarNomorSalah}` : 'Sempurna'}</td>
+        </tr>
+      `).join("");
+    }
+
+    function hitungStatistikAnbuso(paket, rawRows, kktp) {
+      const dataSiswa = rawRows.map(r => ({
+        nama: r.nama_siswa,
+        kelas: r.kelas,
+        nilaiAkhir: Number(r.nilai_akhir) || 0,
+        rawJawaban: JSON.parse(r.raw_jawaban_json || "{}"),
+        skorPerSoal: JSON.parse(r.skor_per_soal_json || "[]")
+      }));
+
+      const N = dataSiswa.length;
+      const daftarNilai = dataSiswa.map(s => s.nilaiAkhir);
+      const rataRata = daftarNilai.reduce((a, b) => a + b, 0) / N;
+      const variansTotal = daftarNilai.reduce((acc, v) => acc + Math.pow(v - rataRata, 2), 0) / N;
+      const siswaUrut = [...dataSiswa].sort((a, b) => b.nilaiAkhir - a.nilaiAkhir);
+      const nKelompok = Math.max(1, Math.round(N * 0.27));
+      const kelompokAtas = siswaUrut.slice(0, nKelompok);
+      const kelompokBawah = siswaUrut.slice(N - nKelompok);
+      const opsiHuruf = paket.jenjang === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
+      let jumlahVariansItem = 0;
+
+      const hasilButir = paket.daftarSoal.map((soal, idx) => {
+        const bobotMaks = Number(soal.bobot) || 1;
+        const skorItem = dataSiswa.map(s => s.skorPerSoal[idx] || 0);
+        const rataItem = skorItem.reduce((a, b) => a + b, 0) / N;
+        jumlahVariansItem += skorItem.reduce((acc, v) => acc + Math.pow(v - rataItem, 2), 0) / N;
+
+        const pIndex = rataItem / bobotMaks;
+        const kategoriKesukaran = pIndex < 0.30 ? "Sukar" : (pIndex > 0.70 ? "Mudah" : "Sedang");
+        const rataAtas = kelompokAtas.reduce((acc, s) => acc + (s.skorPerSoal[idx] || 0), 0) / nKelompok;
+        const rataBawah = kelompokBawah.reduce((acc, s) => acc + (s.skorPerSoal[idx] || 0), 0) / nKelompok;
+        const dIndex = (rataAtas / bobotMaks) - (rataBawah / bobotMaks);
+        const kategoriDayaPembeda = dIndex >= 0.40 ? "Sangat Baik" : (dIndex >= 0.30 ? "Baik" : (dIndex >= 0.20 ? "Cukup" : "Jelek"));
+
+        const distribusi = {};
+        opsiHuruf.forEach(h => distribusi[h] = 0);
+        dataSiswa.forEach(s => {
+          const jaw = s.rawJawaban["no_" + soal.no];
+          if (jaw && typeof jaw !== "object") {
+            String(jaw).toUpperCase().split(",").map(x => x.trim()).filter(Boolean).forEach(h => {
+              if (distribusi[h] !== undefined) distribusi[h]++;
+            });
+          }
+        });
+        const persenOpsi = {};
+        opsiHuruf.forEach(h => persenOpsi[h] = Math.round((distribusi[h] / N) * 100));
+
+        let keputusan = "Diterima", catatan = "Layak masuk bank soal.";
+        if (dIndex < 0.20) { keputusan = "Ditolak"; catatan = "Daya pembeda rendah, wajib diganti."; }
+        else if (dIndex < 0.30 || pIndex < 0.15 || pIndex > 0.90) { keputusan = "Revisi"; catatan = "Perbaiki pengecoh atau kesukaran soal."; }
+
+        return {
+          no: soal.no, tipe: soal.tipe, kunci: soal.kunci,
+          pIndex: Math.round(pIndex * 100) / 100, kategoriKesukaran,
+          dIndex: Math.round(dIndex * 100) / 100, kategoriDayaPembeda,
+          persenOpsi, keputusan, catatan
+        };
+      });
+
+      const k = paket.daftarSoal.length;
+      let alpha = (variansTotal > 0 && k > 1) ? (k / (k - 1)) * (1 - (jumlahVariansItem / variansTotal)) : 0;
+      alpha = Math.max(0, Math.round(alpha * 100) / 100);
+      const kategoriAlpha = alpha >= 0.80 ? "Sangat Tinggi" : (alpha >= 0.70 ? "Tinggi (Reliabel)" : (alpha >= 0.50 ? "Cukup" : "Rendah"));
+
+      const profilSiswa = siswaUrut.map((s, idx) => {
+        const nomorSalah = [];
+        paket.daftarSoal.forEach((soal, qIdx) => { if ((s.skorPerSoal[qIdx] || 0) < soal.bobot) nomorSalah.push(soal.no); });
+        return {
+          peringkat: idx + 1, nama: s.nama, kelas: s.kelas, nilaiAkhir: s.nilaiAkhir,
+          statusKktp: s.nilaiAkhir >= kktp ? "Tuntas" : "Remedial",
+          jumlahSalah: nomorSalah.length, daftarNomorSalah: nomorSalah.join(", ")
+        };
+      });
+
+      return {
+        statistikKelas: {
+          jumlahSiswa: N,
+          rataRata: Math.round(rataRata * 10) / 10,
+          nilaiTertinggi: Math.max(...daftarNilai),
+          nilaiTerendah: Math.min(...daftarNilai),
+          simpanganBaku: Math.round(Math.sqrt(variansTotal) * 10) / 10,
+          jumlahTuntas: dataSiswa.filter(s => s.nilaiAkhir >= kktp).length,
+          persenTuntas: Math.round((dataSiswa.filter(s => s.nilaiAkhir >= kktp).length / N) * 100),
+          reliabilitasAlpha: alpha,
+          kategoriAlpha
+        },
+        hasilButir,
+        profilSiswa
+      };
+    }
+  </script>
+</body>
+</html>
