@@ -3,336 +3,301 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart ASAS - Platform Evaluasi & Anbuso</title>
+  <title>Smart ASAS Studio v3 - VPS Zero-Knowledge</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    h1, h2, h3, .font-heading { font-family: 'Plus Jakarta Sans', sans-serif; }
     .navy-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
-
-    #print-area { display: none; }
     @media print {
       @page { size: A4 portrait; margin: 0; }
-      body { background: #fff; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
       .no-print { display: none !important; }
       #print-area { display: block !important; }
       .kertas-siswa {
-        position: relative;
-        width: 210mm;
-        height: 297mm;
-        page-break-after: always;
-        overflow: hidden;
+        position: relative; width: 210mm; height: 297mm;
+        page-break-after: always; overflow: hidden;
       }
+      .kertas-siswa:last-child { page-break-after: auto; }
     }
-
+    #print-area { display: none; }
   </style>
 </head>
-<body class="min-h-screen pb-16">
+<body class="min-h-screen flex flex-col">
 
-  <!-- LAYAR LOGIN / REGISTRASI & PIN ENKRIPSI GURU -->
+  <!-- LAYAR LOGIN / REGISTRASI ZERO-KNOWLEDGE -->
   <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900 no-print">
-    <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl space-y-5">
+    <div class="bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl border border-slate-200 space-y-5">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center">
-          <span class="material-icons-round text-2xl">center_focus_strong</span>
+        <div class="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md">
+          <span class="material-icons-round">verified_user</span>
         </div>
         <div>
-          <h1 class="text-lg font-extrabold text-slate-900">Smart ASAS Studio</h1>
+          <h1 class="text-lg font-extrabold text-slate-900">Smart ASAS Studio v3</h1>
           <p class="text-xs text-slate-500">Koreksi LJK Kamera, Cetak Timpa & Anbuso</p>
         </div>
       </div>
 
       <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
-        <button onclick="switchAuthTab('login')" id="tab-auth-login" class="flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm">Masuk Akun</button>
-        <button onclick="switchAuthTab('register')" id="tab-auth-reg" class="flex-1 py-2 rounded-lg text-slate-500">Daftar Guru Baru</button>
+        <button id="tab-login" onclick="setAuthMode('login')" class="flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm">Masuk Akun</button>
+        <button id="tab-register" onclick="setAuthMode('register')" class="flex-1 py-2 rounded-lg text-slate-600">Daftar Guru Baru</button>
       </div>
 
-      <div id="auth-nama-box" class="hidden">
-        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
-        <input type="text" id="auth-nama" placeholder="Contoh: Dimas Sekar Langit, S.Pd" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+      <div class="space-y-3">
+        <div id="field-nama" class="hidden">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
+          <input type="text" id="auth-nama" placeholder="Contoh: Dimas Sekar Langit, S.Pd." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Email Guru</label>
+          <input type="email" id="auth-email" placeholder="nama@sekolah.sch.id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Password Login Server</label>
+          <input type="password" id="auth-password" placeholder="Minimal 6 karakter" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+        </div>
+        <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200">
+          <label class="block text-xs font-extrabold text-teal-900 mb-1 flex items-center gap-1">
+            <span class="material-icons-round text-sm">vpn_key</span> PIN Enkripsi Kunci Jawaban (Zero-Knowledge)
+          </label>
+          <input type="password" id="auth-pin" placeholder="PIN Rahasia Anda (Jangan sampai lupa)" class="w-full px-3.5 py-2 rounded-xl border border-teal-300 bg-white text-sm font-bold">
+          <p class="text-[11px] text-teal-800 mt-1.5 leading-relaxed">
+            PIN ini hanya diproses di browser Anda (AES-GCM 256-bit) untuk mengunci dan membuka kunci jawaban. Server tidak pernah menerima PIN maupun kunci asli.
+          </p>
+        </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">Email</label>
-        <input type="email" id="auth-email" placeholder="nama@sekolah.sch.id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">Password Akun</label>
-        <input type="password" id="auth-password" placeholder="Minimal 6 karakter" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
-      </div>
-
-      <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 space-y-2">
-        <label class="block text-xs font-extrabold text-teal-900 flex items-center gap-1.5">
-          <span class="material-icons-round text-base text-teal-700">vpn_key</span>
-          PIN Enkripsi Kunci Jawaban (Zero-Knowledge)
-        </label>
-        <input type="password" id="auth-pin" placeholder="Masukkan PIN rahasia Anda" class="w-full px-3.5 py-2 rounded-xl border border-teal-300 bg-white text-sm font-bold">
-        <p class="text-[11px] text-teal-800 leading-snug">PIN ini mengenkripsi kunci jawaban di browser Anda. Server tidak menyimpan PIN ini.</p>
-      </div>
-
-      <button onclick="submitAuth()" id="btn-auth-submit" class="w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md transition">
-        Masuk ke Ruang Kerja
+      <button onclick="submitAuth()" id="btn-auth-submit" class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold shadow-md transition">
+        Masuk & Buka Brankas Soal
       </button>
     </div>
   </div>
 
-  <!-- APLIKASI UTAMA -->
-  <div id="main-app" class="hidden">
-    <header class="navy-header text-white sticky top-0 z-40 shadow-md no-print">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <!-- APLIKASI UTAMA (SETELAH LOGIN) -->
+  <div id="main-app" class="hidden flex-1 flex flex-col">
+    <header class="navy-header text-white shadow-lg sticky top-0 z-30 no-print">
+      <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
-            <span class="material-icons-round">center_focus_strong</span>
+          <div class="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
+            <span class="material-icons-round">document_scanner</span>
           </div>
           <div>
-            <h1 class="text-base font-extrabold tracking-tight">Smart ASAS Studio</h1>
-            <div class="flex items-center gap-2 text-[11px] text-slate-300">
-              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span id="user-display-label">-</span>
-            </div>
+            <h1 class="text-base font-extrabold tracking-tight">Smart ASAS Studio v3</h1>
+            <p class="text-xs text-slate-300" id="header-user-info">Guru Mapel | Mode Zero-Knowledge Aktif</p>
           </div>
         </div>
 
-        <nav class="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-xl border border-slate-700">
+        <nav class="flex flex-wrap items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700">
           <button onclick="bukaModul('scan')" id="nav-scan" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-teal-600 text-white flex items-center gap-1.5 transition">
-            <span class="material-icons-round text-base">videocam</span>
-            1. Live Scan & Ekspor
+            <span class="material-icons-round text-base">photo_camera</span> Pindai & Cetak Timpa
           </button>
-          <button onclick="bukaModul('config')" id="nav-config" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition">
-            <span class="material-icons-round text-base">tune</span>
-            2. Konfigurasi Paket
+          <button onclick="bukaModul('paket')" id="nav-paket" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+            <span class="material-icons-round text-base">lock</span> Paket Soal & Kunci
           </button>
-          <button onclick="bukaModul('anbuso')" id="nav-anbuso" class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition">
-            <span class="material-icons-round text-base">analytics</span>
-            3. Analisis Butir Soal
+          <button onclick="bukaModul('anbuso')" id="nav-anbuso" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+            <span class="material-icons-round text-base">analytics</span> Analisis Butir (ANBUSO)
           </button>
-        </nav>
-
-        <div class="flex items-center gap-2">
-          <button onclick="bukaModalOcr()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-slate-200 flex items-center gap-1.5">
-            <span class="material-icons-round text-sm text-teal-400">key</span>
-            <span>API OCR</span>
+          <button onclick="bukaModul('akun')" id="nav-akun" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition">
+            <span class="material-icons-round text-base">settings</span> API OCR
           </button>
-          <button onclick="logout()" class="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-300" title="Keluar">
+          <button onclick="logout()" class="px-3 py-2 rounded-lg text-xs font-semibold text-rose-300 hover:bg-rose-950/50 flex items-center gap-1 transition">
             <span class="material-icons-round text-base">logout</span>
           </button>
-        </div>
+        </nav>
       </div>
     </header>
 
-    <!-- MODAL PENGATURAN API OCR LOKAL -->
-    <div id="modal-ocr" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 no-print">
-      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 class="text-sm font-extrabold text-slate-900">Pengaturan Mesin Pembaca (OCR)</h3>
-          <button onclick="tutupModalOcr()" class="text-slate-400 hover:text-slate-700"><span class="material-icons-round">close</span></button>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Mode Pembacaan</label>
-          <select id="ocr-mode-select" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
-            <option value="SIMULASI">Mode Simulasi (Tes Tanpa API Key)</option>
-            <option value="GEMINI">Gemini 3.5 Flash-Lite (Google AI Studio)</option>
-            <option value="SNAPTOJSON">Snaptojson API</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">API Key Pribadi (Disimpan di Browser Anda)</label>
-          <input type="password" id="ocr-api-key-input" placeholder="Tempel API Key Gemini atau Snaptojson" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button onclick="tutupModalOcr()" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold">Batal</button>
-          <button onclick="simpanSettingOcr()" class="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold">Simpan</button>
-        </div>
-      </div>
-    </div>
-
-
-  <!-- MODAL PENGATURAN TEMA CETAK TIMPA, LINGKARAN KUNCI & PRATINJAU A4 -->
-  <div id="modal-cetak-preview" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 no-print overflow-y-auto">
-    <div class="bg-white rounded-3xl max-w-5xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
-      <div class="navy-header text-white px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <span class="material-icons-round text-teal-300">print</span>
-          <div>
-            <h3 class="text-sm font-extrabold">Tema Cetak Timpa, Lingkaran Koreksi & Pratinjau A4</h3>
-            <p class="text-[11px] text-slate-300">Sesuaikan gaya angka nilai dan posisi lingkaran jawaban benar sebelum mencetak ke kertas siswa</p>
-          </div>
-        </div>
-        <button onclick="tutupModalCetak()" class="text-slate-300 hover:text-white"><span class="material-icons-round">close</span></button>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12">
-        <!-- Panel Kontrol Kiri -->
-        <div class="lg:col-span-5 p-5 border-b lg:border-b-0 lg:border-r border-slate-200 space-y-4 max-h-[78vh] overflow-y-auto">
-          <div>
-            <label class="block text-xs font-extrabold text-slate-800 mb-2">1. Pilih Tema Cetakan Angka Nilai</label>
-            <div class="grid grid-cols-2 gap-2" id="pilihan-tema-grid">
-              <button type="button" onclick="pilihTemaCetak('classic')" id="tema-btn-classic" class="p-2.5 rounded-xl border-2 border-teal-600 bg-teal-50/60 text-left transition">
-                <div class="text-xs font-extrabold text-slate-900">Klasik Kotak</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">Bingkai tegas double-border</div>
-              </button>
-              <button type="button" onclick="pilihTemaCetak('circle')" id="tema-btn-circle" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
-                <div class="text-xs font-extrabold text-slate-900">Stempel Bulat</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">Lingkaran stempel guru</div>
-              </button>
-              <button type="button" onclick="pilihTemaCetak('minimal')" id="tema-btn-minimal" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
-                <div class="text-xs font-extrabold text-slate-900">Minimalis Garis</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">Angka besar + garis bawah</div>
-              </button>
-              <button type="button" onclick="pilihTemaCetak('card')" id="tema-btn-card" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
-                <div class="text-xs font-extrabold text-slate-900">Kartu Rincian</div>
-                <div class="text-[10px] text-slate-500 mt-0.5">Nilai + Benar/Salah + Status</div>
-              </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 pt-1">
+    <!-- MODAL PENGATURAN TEMA CETAK TIMPA, LINGKARAN KUNCI & PRATINJAU A4 -->
+    <div id="modal-cetak-preview" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 no-print overflow-y-auto">
+      <div class="bg-white rounded-3xl max-w-5xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto">
+        <div class="navy-header text-white px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="material-icons-round text-teal-300">print</span>
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">Posisi Atas Nilai (mm)</label>
-              <input type="number" id="prev-offset-top" value="52" oninput="renderPratinjauCetak()" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold">
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">Warna Tinta Koreksi</label>
-              <select id="prev-warna-tinta" onchange="renderPratinjauCetak()" class="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white">
-                <option value="#dc2626">Merah Koreksi (Disarankan)</option>
-                <option value="#0f172a">Hitam Pekat (Laser Monokrom)</option>
-                <option value="#0d9488">Tosca Gelap</option>
-              </select>
+              <h3 class="text-sm font-extrabold">Tema Cetak Timpa, Lingkaran Koreksi & Pratinjau A4</h3>
+              <p class="text-[11px] text-slate-300">Sesuaikan gaya angka nilai dan posisi lingkaran jawaban benar sebelum mencetak ke kertas siswa</p>
             </div>
           </div>
+          <button onclick="tutupModalCetak()" class="text-slate-300 hover:text-white"><span class="material-icons-round">close</span></button>
+        </div>
 
-          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                <span class="material-icons-round text-sm text-rose-600">radio_button_unchecked</span>
-                2. Lingkari Kunci pada Soal Salah
-              </label>
-              <input type="checkbox" id="prev-aktif-lingkar-grid" checked onchange="renderPratinjauCetak()" class="w-4 h-4 accent-teal-600">
+        <div class="grid grid-cols-1 lg:grid-cols-12">
+          <!-- Panel Kontrol Kiri -->
+          <div class="lg:col-span-5 p-5 border-b lg:border-b-0 lg:border-r border-slate-200 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div>
+              <label class="block text-xs font-extrabold text-slate-800 mb-2">1. Pilih Tema Cetakan Angka Nilai</label>
+              <div class="grid grid-cols-2 gap-2" id="pilihan-tema-grid">
+                <button type="button" onclick="pilihTemaCetak('classic')" id="tema-btn-classic" class="p-2.5 rounded-xl border-2 border-teal-600 bg-teal-50/60 text-left transition">
+                  <div class="text-xs font-extrabold text-slate-900">Klasik Kotak</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Bingkai tegas double-border</div>
+                </button>
+                <button type="button" onclick="pilihTemaCetak('circle')" id="tema-btn-circle" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
+                  <div class="text-xs font-extrabold text-slate-900">Stempel Bulat</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Lingkaran stempel guru</div>
+                </button>
+                <button type="button" onclick="pilihTemaCetak('minimal')" id="tema-btn-minimal" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
+                  <div class="text-xs font-extrabold text-slate-900">Minimalis Garis</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Angka besar + garis bawah</div>
+                </button>
+                <button type="button" onclick="pilihTemaCetak('card')" id="tema-btn-card" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 text-left transition">
+                  <div class="text-xs font-extrabold text-slate-900">Kartu Rincian</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Nilai + Benar/Salah + Status</div>
+                </button>
+              </div>
             </div>
-            <p class="text-[11px] text-slate-600 leading-snug">Otomatis melingkari huruf kunci jawaban yang benar tepat di atas opsi A/B/C/D/E pada nomor yang dijawab salah oleh siswa.</p>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Tata Letak Kolom LJK</label>
-                <select id="prev-ljk-preset" onchange="terapkanPresetLjk()" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-[11px] font-bold bg-white">
-                  <option value="2col">2 Kolom (20 soal/kolom)</option>
-                  <option value="4col">4 Kolom (10 soal/kolom)</option>
-                  <option value="1col">1 Kolom Memanjang</option>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Posisi Atas Nilai (mm)</label>
+                <input type="number" step="0.5" id="prev-offset-top" value="75" oninput="renderPratinjauCetak()" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Warna Tinta Koreksi</label>
+                <select id="prev-warna-tinta" onchange="renderPratinjauCetak()" class="w-full px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                  <option value="#dc2626">Merah Koreksi (Disarankan)</option>
+                  <option value="#0f172a">Hitam Pekat (Laser Monokrom)</option>
+                  <option value="#0d9488">Tosca Gelap</option>
                 </select>
               </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Atas Grid LJK (mm)</label>
-                <input type="number" id="prev-ljk-top" value="98" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <span class="material-icons-round text-sm text-rose-600">radio_button_unchecked</span>
+                  2. Lingkari Kunci pada Soal Salah
+                </label>
+                <input type="checkbox" id="prev-aktif-lingkar-grid" checked onchange="renderPratinjauCetak()" class="w-4 h-4 accent-teal-600">
               </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Kiri Kolom 1 (mm)</label>
-                <input type="number" id="prev-ljk-left" value="34" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+              <p class="text-[11px] text-slate-600 leading-snug">Otomatis melingkari huruf kunci jawaban yang benar tepat di atas opsi A/B/C/D/E pada nomor yang dijawab salah oleh siswa.</p>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div class="col-span-2">
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Preset Tata Letak Kolom LJK</label>
+                  <select id="prev-ljk-preset" onchange="terapkanPresetLjk()" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-[11px] font-bold bg-white">
+                    <option value="smp3col">LJK SMP 3 Kolom (A-D, 15 baris/kolom)</option>
+                    <option value="sma3col">LJK SMA 3 Kolom (A-E, 15 baris/kolom)</option>
+                    <option value="2col">2 Kolom Standar (20 soal/kolom)</option>
+                    <option value="4col">4 Kolom Padat (10 soal/kolom)</option>
+                    <option value="1col">1 Kolom Memanjang</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Atas Grid LJK (mm)</label>
+                  <input type="number" step="0.1" id="prev-ljk-top" value="100.2" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Kiri Opsi A Kolom 1 (mm)</label>
+                  <input type="number" step="0.1" id="prev-ljk-left" value="42.3" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Jarak Antar Baris (mm)</label>
+                  <input type="number" step="0.1" id="prev-ljk-rowh" value="7.9" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Lebar Antar Kolom (mm)</label>
+                  <input type="number" step="0.1" id="prev-ljk-colw" value="52.6" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Jarak Opsi A-E (mm)</label>
+                  <input type="number" step="0.1" id="prev-ljk-optgap" value="9.5" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Baris per Kolom</label>
+                  <input type="number" id="prev-ljk-rowspercol" value="15" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+                </div>
               </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Jarak Antar Baris (mm)</label>
-                <input type="number" step="0.5" id="prev-ljk-rowh" value="7.5" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
-              </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Lebar Antar Kolom (mm)</label>
-                <input type="number" id="prev-ljk-colw" value="85" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
-              </div>
-              <div>
-                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Jarak Opsi A-E (mm)</label>
-                <input type="number" step="0.5" id="prev-ljk-optgap" value="8.5" oninput="renderPratinjauCetak()" class="w-full px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold">
+
+              <div class="pt-1 border-t border-slate-200 space-y-2">
+                <label class="flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+                  <input type="checkbox" id="prev-aktif-ringkasan-atas" checked onchange="renderPratinjauCetak()" class="w-3.5 h-3.5 accent-teal-600">
+                  Tampilkan juga daftar nomor salah dengan kunci dilingkari di bagian atas
+                </label>
+
+                <div class="flex items-center justify-between gap-2 pt-1">
+                  <label class="text-[11px] font-bold text-teal-800 cursor-pointer hover:underline flex items-center gap-1">
+                    <span class="material-icons-round text-sm">image</span>
+                    Unggah Foto LJK Kosong (Kalibrasi Layar)
+                    <input type="file" accept="image/*" onchange="unggahLatarLjkPratinjau(event)" class="hidden">
+                  </label>
+                  <button type="button" id="btn-hapus-latar-ljk" onclick="hapusLatarLjkPratinjau()" class="hidden text-[10px] font-bold text-rose-600 hover:underline">Hapus Latar</button>
+                </div>
               </div>
             </div>
 
-            <label class="flex items-center gap-2 text-[11px] font-semibold text-slate-700 pt-1">
-              <input type="checkbox" id="prev-aktif-ringkasan-atas" checked onchange="renderPratinjauCetak()" class="w-3.5 h-3.5 accent-teal-600">
-              Tampilkan juga daftar nomor salah dengan kunci dilingkari di bagian atas
-            </label>
+            <div class="flex gap-2 pt-2">
+              <button type="button" onclick="tutupModalCetak()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Tutup</button>
+              <button type="button" onclick="eksekusiPrintDariModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md transition">
+                <span class="material-icons-round text-base">print</span>
+                <span id="btn-modal-print-label">Cetak Sekarang ke Kertas A4</span>
+              </button>
+            </div>
           </div>
 
-          <div class="flex gap-2 pt-2">
-            <button type="button" onclick="tutupModalCetak()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Tutup</button>
-            <button type="button" onclick="eksekusiPrintDariModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md transition">
-              <span class="material-icons-round text-base">print</span>
-              <span id="btn-modal-print-label">Cetak Sekarang ke Kertas A4</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Panel Pratinjau Visual Kanan -->
-        <div class="lg:col-span-7 bg-slate-200/80 p-5 flex flex-col items-center justify-center max-h-[78vh] overflow-y-auto">
-          <div class="w-full flex items-center justify-between mb-2 px-1">
-            <span class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Pratinjau Kertas A4 (210 x 297 mm)</span>
-            <span id="preview-sample-info" class="text-[11px] font-semibold text-slate-600">Contoh: Siswa Simulasi</span>
-          </div>
-          <!-- Simulasi Kertas A4 Proporsional (Skala 1mm = 2.1px -> 441px x 623px) -->
-          <div id="a4-preview-canvas" class="relative bg-white shadow-xl border border-slate-300 overflow-hidden" style="width: 441px; height: 623px;">
-            <!-- Lapisan Bayangan Lembar Jawaban Asli (Hanya tampil di layar pratinjau, tidak ikut dicetak) -->
-            <div id="a4-ghost-sheet" class="absolute inset-0 pointer-events-none opacity-45"></div>
-            <!-- Lapisan Hasil Cetakan Timpa Sesungguhnya -->
-            <div id="a4-overlay-layer" class="absolute inset-0 pointer-events-none"></div>
+          <!-- Panel Pratinjau Visual Kanan -->
+          <div class="lg:col-span-7 bg-slate-200/80 p-5 flex flex-col items-center justify-center max-h-[80vh] overflow-y-auto">
+            <div class="w-full flex items-center justify-between mb-2 px-1">
+              <span class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Pratinjau Kertas A4 (210 x 297 mm)</span>
+              <span id="preview-sample-info" class="text-[11px] font-semibold text-slate-600">Contoh: Siswa Simulasi</span>
+            </div>
+            <!-- Simulasi Kertas A4 Proporsional (Skala 1mm = 2.1px -> 441px x 623px) -->
+            <div id="a4-preview-canvas" class="relative bg-white shadow-xl border border-slate-300 overflow-hidden" style="width: 441px; height: 623px;">
+              <img id="a4-uploaded-bg" src="" alt="" class="hidden absolute inset-0 w-full h-full object-fill pointer-events-none opacity-65">
+              <div id="a4-ghost-sheet" class="absolute inset-0 pointer-events-none opacity-45"></div>
+              <div id="a4-overlay-layer" class="absolute inset-0 pointer-events-none"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-
-    <main class="max-w-7xl mx-auto px-4 mt-6 no-print">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 no-print">
 
       <!-- MODUL 1: LIVE SCANNER, CETAK TIMPA & EKSPOR EXCEL PER MAPEL -->
-      <div id="modul-scan" class="space-y-6">
+      <section id="modul-scan" class="space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
             <div class="flex items-center justify-between">
               <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span class="material-icons-round text-teal-600">filter_center_focus</span>
-                Kamera Auto-Focus
+                <span class="material-icons-round text-teal-600">center_focus_strong</span> Pemindai Kamera Otomatis
               </h2>
-              <button type="button" id="btn-toggle-cam" onclick="toggleKamera()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center gap-1">
-                <span class="material-icons-round text-sm">videocam</span>
-                Nyalakan
+              <button id="btn-toggle-cam" onclick="toggleKamera()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center gap-1">
+                <span class="material-icons-round text-sm">videocam</span> Nyalakan
               </button>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Paket Soal Aktif</label>
-              <select id="scan-pilih-paket" onchange="muatAntreanHasil()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
-                <option value="">Belum ada paket soal...</option>
-              </select>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Paket Soal Aktif (Terdekripsi di Memori)</label>
+              <select id="scan-pilih-paket" onchange="muatAntreanHasil()" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold bg-slate-50"></select>
             </div>
 
-            <div class="relative w-full aspect-[3/4] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
+            <div class="relative w-full aspect-[3/4] bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 flex items-center justify-center">
               <video id="live-video" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
               <div id="cam-placeholder" class="text-center p-6 text-slate-400">
-                <span class="material-icons-round text-5xl text-slate-600 mb-2">no_photography</span>
-                <p class="text-xs font-semibold text-slate-300">Kamera Belum Aktif</p>
-                <p class="text-[11px] mt-1">Klik <strong>Nyalakan</strong> lalu arahkan ke lembar jawaban hingga fokus terkunci otomatis.</p>
+                <span class="material-icons-round text-4xl text-slate-600 mb-2">camera_alt</span>
+                <p class="text-xs font-medium">Klik <b>Nyalakan</b> lalu arahkan kamera ke lembar jawaban. Sistem menjepret otomatis saat fokus stabil.</p>
               </div>
               <div id="viewfinder-overlay" class="hidden absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
-                <div class="flex justify-center">
-                  <span id="focus-badge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-900/80 text-white">Arahkan kertas ke bingkai...</span>
+                <div class="flex items-center justify-between bg-slate-950/75 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-[11px] font-semibold">
+                  <span id="focus-badge">Mencari fokus lembar jawaban...</span>
                 </div>
                 <div id="guide-box" class="w-full h-[78%] border-2 border-dashed border-white/50 rounded-xl relative"></div>
-                <div class="w-full bg-slate-900/80 rounded-full h-2 overflow-hidden">
-                  <div id="focus-progress" class="bg-emerald-400 h-full w-0 transition-all duration-100"></div>
+                <div class="w-full bg-slate-950/80 rounded-full h-2 overflow-hidden">
+                  <div id="focus-progress" class="bg-emerald-400 h-full w-0 transition-all duration-150"></div>
                 </div>
               </div>
             </div>
 
-            <div class="flex items-center justify-between gap-2 pt-1">
-              <div class="flex items-center gap-2 text-[11px] text-slate-600">
-                <span class="font-semibold">Ambang Fokus:</span>
-                <select id="sensitivitas-fokus" class="px-2 py-1 rounded-lg border border-slate-300 bg-white font-semibold">
-                  <option value="8">Cahaya Redup</option>
-                  <option value="11" selected>Normal</option>
-                  <option value="15">Ketat</option>
-                </select>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 text-xs text-slate-600">
+                <span>Sensitivitas Fokus:</span>
+                <input type="range" id="sensitivitas-fokus" min="5" max="22" value="11" class="w-24 accent-teal-600">
               </div>
-              <button type="button" onclick="jepretManualDariStream()" class="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold">
-                Baca Sekarang
+              <button onclick="jepretManualDariStream()" class="px-3.5 py-2 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold hover:bg-teal-100">
+                Jepret Manual
               </button>
             </div>
 
@@ -340,220 +305,271 @@
           </div>
 
           <div class="lg:col-span-7 space-y-5">
-            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
-              <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span class="material-icons-round text-emerald-600">table_view</span>
-                Unduh Rekap Nilai & Anbuso ke Excel (.xlsx) Per Mapel
-              </h2>
-              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
-                <div class="sm:col-span-6">
-                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
-                  <select id="ekspor-pilih-mapel" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"></select>
-                </div>
-                <div class="sm:col-span-2">
-                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">KKTP</label>
-                  <input type="number" id="ekspor-kktp" value="75" class="w-full px-2.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-center">
-                </div>
-                <div class="sm:col-span-4">
-                  <button type="button" onclick="unduhExcelPerMapel()" class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
-                    <span class="material-icons-round text-sm">download</span>
-                    Unduh Excel (.xlsx)
-                  </button>
-                </div>
+            <!-- Kartu Ekspor Rekap Excel Satu Mata Pelajaran -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <span class="material-icons-round text-emerald-600">table_view</span> Rekap Excel (.xlsx) per Mata Pelajaran
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">Menggabungkan nilai semua kelas dalam satu mapel ke satu file Excel.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="ekspor-pilih-mapel" class="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-slate-50"></select>
+                <button onclick="eksporExcelPerMapel()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                  <span class="material-icons-round text-base">download</span> Unduh Excel Mapel
+                </button>
               </div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <!-- Kartu Antrean Cetak Timpa -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 class="text-sm font-bold text-slate-900">Antrean Hasil Koreksi & Cetak Timpa</h2>
                   <p class="text-xs text-slate-500">Pilih tema cetakan nilai dan pratinjau lingkaran koreksi sebelum mencetak</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <button onclick="bukaModalCetak(null)" class="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition">
-                    <span class="material-icons-round text-base">visibility</span>
-                    Tema & Pratinjau
+                    <span class="material-icons-round text-base">palette</span> Tema & Pratinjau A4
                   </button>
-                  <button onclick="bukaModalCetak(null)" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5">
+                  <button onclick="bukaModalCetak(null)" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
                     <span class="material-icons-round text-base">print</span>
                     Cetak Semua (<span id="jumlah-antrean">0</span>)
                   </button>
                 </div>
               </div>
 
-              <div class="overflow-x-auto max-h-[340px] overflow-y-auto border border-slate-100 rounded-xl">
-                <table class="w-full text-left border-collapse text-xs">
-                  <thead class="bg-slate-900 text-white sticky top-0">
-                    <tr>
+              <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
                       <th class="py-2.5 px-3">No</th>
                       <th class="py-2.5 px-3">Nama & Kelas</th>
                       <th class="py-2.5 px-3">Nilai</th>
-                      <th class="py-2.5 px-3">Rincian Salah</th>
+                      <th class="py-2.5 px-3">Ringkasan Salah</th>
                       <th class="py-2.5 px-3 text-right">Aksi</th>
                     </tr>
                   </thead>
-                  <tbody id="tbody-antrean" class="divide-y divide-slate-100"></tbody>
+                  <tbody id="tbody-antrean" class="divide-y divide-slate-100 text-xs">
+                    <tr><td colspan="5" class="py-6 text-center text-slate-400">Belum ada lembar jawaban dipindai.</td></tr>
+                  </tbody>
                 </table>
               </div>
             </div>
           </div>
-
         </div>
-      </div>
+      </section>
 
-      <!-- MODUL 2: KONFIGURASI PAKET SOAL (JUMLAH SOAL DINAMIS & TERENKRIPSI AES-GCM) -->
-      <div id="modul-config" class="hidden space-y-6">
-        <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      <!-- MODUL 2: KONFIGURASI PAKET SOAL & KUNCI JAWABAN TERENKRIPSI -->
+      <section id="modul-paket" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
-              <h2 class="text-base font-bold text-slate-900">Konfigurasi Paket Soal & Kunci Jawaban</h2>
-              <p class="text-xs text-slate-500">Atur jumlah soal, tipe PG/MCMA, dan bobot poin (dienkripsi dengan PIN Anda)</p>
+              <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span class="material-icons-round text-teal-600">enhanced_encryption</span> Konfigurasi Paket Soal (Terenkripsi AES-GCM)
+              </h2>
+              <p class="text-xs text-slate-500">Atur jumlah butir soal secara dinamis (1 hingga 100 soal). Kunci jawaban dienkripsi dengan PIN Anda sebelum disimpan ke SQLite VPS.</p>
             </div>
-            <div class="flex items-center gap-3 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs">
-              <span>Total Soal: <strong id="cfg-count-total" class="text-white">40</strong></span>
-              <span class="text-slate-600">|</span>
-              <span>PG: <strong id="cfg-count-pg" class="text-teal-300">30</strong></span>
-              <span class="text-slate-600">|</span>
-              <span>MCMA: <strong id="cfg-count-mcma" class="text-emerald-300">10</strong></span>
-              <span id="cfg-badge-total" class="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Total: 100 Poin</span>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="bobotOtomatis()" class="px-3.5 py-2 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold hover:bg-teal-100">
+                Bagi Rata Bobot (Total 100)
+              </button>
+              <button onclick="simpanPaketConfig()" class="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-slate-800">
+                <span class="material-icons-round text-base">save</span> Enkripsi & Simpan Paket
+              </button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 mt-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
-              <input type="text" id="cfg-mapel" placeholder="Misal: Geografi" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold">
+              <input type="text" id="cfg-mapel" placeholder="Contoh: Geografi" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Paket / Kelas</label>
-              <input type="text" id="cfg-nama-paket" placeholder="Misal: Kelas X - A" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Soal (1-100)</label>
-              <input type="number" id="cfg-jumlah-soal" min="1" max="100" value="40" onchange="ubahJumlahSoalConfig()" class="w-full px-3 py-2 rounded-xl border border-teal-400 bg-teal-50/40 text-sm font-extrabold text-teal-900">
+              <input type="text" id="cfg-nama-paket" placeholder="Contoh: ASAS X-A" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Jenjang</label>
-              <select id="cfg-jenjang" onchange="ubahJenjangConfig()" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+              <select id="cfg-jenjang" onchange="renderTabelKunci()" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
                 <option value="SMA">SMA (Opsi A - E)</option>
                 <option value="SMP">SMP (Opsi A - D)</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Aturan Skor MCMA</label>
-              <select id="cfg-aturan-mcma" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
-                <option value="PARSIAL">Parsial Anti-Tebak</option>
-                <option value="MUTLAK">Mutlak (Harus Tepat)</option>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Penilaian MCMA</label>
+              <select id="cfg-aturan-mcma" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                <option value="PARSIAL">Skor Parsial Proporsional</option>
+                <option value="MUTLAK">Skor Mutlak</option>
               </select>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Posisi Cetak Atas (mm)</label>
-              <input type="number" id="cfg-offset-top" value="52" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-bold">
+              <input type="number" id="cfg-offset-top" value="75" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-semibold">
             </div>
           </div>
 
-          <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div class="flex flex-wrap gap-2">
-              <button type="button" onclick="terapkanPresetMcmaAkhir()" class="px-3 py-1.5 rounded-lg bg-slate-100 font-semibold">Preset MCMA 25% Akhir</button>
-              <button type="button" onclick="autoKalibrasiConfig()" class="px-3 py-1.5 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 font-semibold">Kalibrasi ke 100</button>
-            </div>
-            <button type="button" onclick="simpanPaketConfig()" class="px-5 py-2.5 rounded-xl bg-teal-600 text-white font-bold flex items-center gap-1.5">
-              <span class="material-icons-round text-base">lock</span>
-              Enkripsi & Simpan Paket
-            </button>
-          </div>
-        </section>
-
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="cfg-grid-soal"></section>
-      </div>
-
-      <!-- MODUL 3: ANALISIS BUTIR SOAL (ANBUSO) -->
-      <div id="modul-anbuso" class="hidden space-y-6">
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
-          <div class="flex flex-wrap items-center gap-3">
-            <select id="anb-pilih-paket" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"></select>
-            <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-              <span>KKTP:</span>
-              <input type="number" id="anb-kktp" value="75" class="w-14 px-2 py-1.5 rounded-lg border border-slate-300 text-center font-bold">
-            </div>
-            <button onclick="jalankanAnbuso()" class="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center gap-1.5">
-              <span class="material-icons-round text-base">analytics</span>
-              Hitung Analisis
-            </button>
-          </div>
-          <div id="anb-status" class="text-xs font-semibold text-slate-500">Siap menganalisis data ujian.</div>
-        </div>
-
-        <div id="anb-hasil-container" class="hidden space-y-6">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Reliabilitas (Alpha)</div>
-              <div class="text-2xl font-extrabold text-slate-900 mt-1" id="anb-alpha">0.00</div>
-              <div class="text-xs font-semibold text-teal-700 mt-1" id="anb-alpha-ket">-</div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Rata-Rata Kelas</div>
-              <div class="text-2xl font-extrabold text-slate-900 mt-1" id="anb-rata">0.0</div>
-              <div class="text-xs text-slate-500 mt-1" id="anb-sebaran">Min: 0 | Max: 0</div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Ketuntasan KKTP</div>
-              <div class="text-2xl font-extrabold text-slate-900 mt-1" id="anb-tuntas">0%</div>
-              <div class="text-xs text-slate-500 mt-1" id="anb-tuntas-det">0 siswa tuntas</div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="text-[11px] font-bold text-slate-400 uppercase">Kualitas Butir</div>
-              <div class="flex gap-1.5 mt-2 text-xs font-bold">
-                <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800" id="anb-jml-baik">0 Baik</span>
-                <span class="px-2 py-1 rounded bg-amber-100 text-amber-800" id="anb-jml-revisi">0 Revisi</span>
-                <span class="px-2 py-1 rounded bg-rose-100 text-rose-800" id="anb-jml-tolak">0 Ganti</span>
+          <!-- Pengaturan Jumlah Soal Dinamis -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">Jumlah Butir Soal (1 - 100)</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" id="cfg-jumlah-soal" min="1" max="100" value="40" class="w-20 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-extrabold text-center bg-white">
+                  <button type="button" onclick="terapkanJumlahSoal()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
+                    Terapkan
+                  </button>
+                </div>
+              </div>
+              <div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
+              <div>
+                <span class="block text-[11px] font-bold text-slate-500 mb-1">Preset Cepat Jumlah Soal:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button type="button" onclick="setJumlahSoalPreset(10)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">10</button>
+                  <button type="button" onclick="setJumlahSoalPreset(20)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">20</button>
+                  <button type="button" onclick="setJumlahSoalPreset(25)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">25</button>
+                  <button type="button" onclick="setJumlahSoalPreset(30)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">30</button>
+                  <button type="button" onclick="setJumlahSoalPreset(35)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">35</button>
+                  <button type="button" onclick="setJumlahSoalPreset(40)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">40</button>
+                  <button type="button" onclick="setJumlahSoalPreset(50)" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-teal-500 text-xs font-bold">50</button>
+                </div>
               </div>
             </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="tambahSatuSoal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 text-xs font-bold flex items-center gap-1">
+                <span class="material-icons-round text-sm">add</span> Tambah 1 Soal
+              </button>
+              <button type="button" onclick="hapusSatuSoalTerakhir()" class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-xs font-bold flex items-center gap-1">
+                <span class="material-icons-round text-sm">remove</span> Kurangi 1
+              </button>
+            </div>
           </div>
 
-          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            <div class="px-5 py-3.5 bg-slate-900 text-white text-xs font-bold">Analisis Kualitas Butir Soal & Sebaran Pengecoh</div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead class="bg-slate-100 text-slate-700 font-bold">
-                  <tr>
-                    <th class="py-2.5 px-4">No</th>
-                    <th class="py-2.5 px-3">Tipe & Kunci</th>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-[55vh] overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+              <thead class="sticky top-0 z-10 bg-slate-100 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
+                <tr>
+                  <th class="py-2.5 px-3 w-14">No</th>
+                  <th class="py-2.5 px-3 w-40">Tipe Soal</th>
+                  <th class="py-2.5 px-3">Kunci Jawaban Benar</th>
+                  <th class="py-2.5 px-3 w-28">Bobot</th>
+                  <th class="py-2.5 px-3 w-16 text-center">Hapus</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-kunci" class="divide-y divide-slate-100 text-xs"></tbody>
+            </table>
+          </div>
+
+          <!-- Daftar Paket Tersimpan (dengan tombol Hapus Paket) -->
+          <div class="pt-3 border-t border-slate-200">
+            <h3 class="text-xs font-extrabold text-slate-800 mb-2">Daftar Paket Soal Tersimpan di Akun Anda</h3>
+            <div id="list-paket-tersimpan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODUL 3: ANALISIS BUTIR SOAL (ANBUSO) -->
+      <section id="modul-anbuso" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Paket Soal Analisis</label>
+              <select id="anb-pilih-paket" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-slate-50 min-w-[230px]"></select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">KKTP</label>
+              <input type="number" id="anb-kktp" value="75" class="w-20 px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-center">
+            </div>
+          </div>
+          <button onclick="jalankanAnbuso()" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
+            <span class="material-icons-round text-base">insights</span> Hitung Analisis Butir & Reliabilitas
+          </button>
+        </div>
+
+        <div id="anbuso-hasil-container" class="hidden space-y-6">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Rata-Rata / Simp. Baku</div>
+              <div id="stat-rata" class="text-xl font-extrabold text-slate-900 mt-1">-</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Ketuntasan Kelas</div>
+              <div id="stat-tuntas" class="text-xl font-extrabold text-emerald-600 mt-1">-</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Reliabilitas Tes</div>
+              <div id="stat-alpha" class="text-xl font-extrabold text-teal-700 mt-1">-</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-400 uppercase">Rentang Nilai</div>
+              <div id="stat-rentang" class="text-xl font-extrabold text-slate-900 mt-1">-</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+            <h3 class="text-sm font-extrabold text-slate-900">Analisis Kualitas Butir Soal & Sebaran Pengecoh</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
+                    <th class="py-2.5 px-3">No</th>
+                    <th class="py-2.5 px-3">Kunci</th>
                     <th class="py-2.5 px-3">Kesukaran (P)</th>
                     <th class="py-2.5 px-3">Daya Pembeda (D)</th>
-                    <th class="py-2.5 px-4">Sebaran Jawaban Siswa</th>
-                    <th class="py-2.5 px-4">Rekomendasi</th>
+                    <th class="py-2.5 px-3">Sebaran Jawaban</th>
+                    <th class="py-2.5 px-3">Keputusan</th>
                   </tr>
                 </thead>
-                <tbody id="anb-tbody-soal" class="divide-y divide-slate-100"></tbody>
+                <tbody id="tbody-anbuso-butir" class="divide-y divide-slate-100 text-xs"></tbody>
               </table>
             </div>
           </div>
 
-          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            <div class="px-5 py-3.5 bg-slate-900 text-white text-xs font-bold">Profil Diagnostik Pemahaman Siswa</div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead class="bg-slate-100 text-slate-700 font-bold">
-                  <tr>
-                    <th class="py-2.5 px-4">Rank</th>
-                    <th class="py-2.5 px-4">Nama Siswa</th>
-                    <th class="py-2.5 px-3">Kelas</th>
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+            <h3 class="text-sm font-extrabold text-slate-900">Profil Ketuntasan Siswa & Analisis Kesalahan</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
+                    <th class="py-2.5 px-3">Peringkat</th>
+                    <th class="py-2.5 px-3">Nama & Kelas</th>
                     <th class="py-2.5 px-3">Nilai</th>
                     <th class="py-2.5 px-3">Status</th>
-                    <th class="py-2.5 px-4">Nomor Soal Belum Tuntas</th>
+                    <th class="py-2.5 px-3">Nomor Soal Salah</th>
                   </tr>
                 </thead>
-                <tbody id="anb-tbody-siswa" class="divide-y divide-slate-100"></tbody>
+                <tbody id="tbody-anbuso-siswa" class="divide-y divide-slate-100 text-xs"></tbody>
               </table>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <!-- MODUL 4: PENGATURAN API KEY OCR -->
+      <section id="modul-akun" class="hidden max-w-2xl mx-auto">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h2 class="text-base font-extrabold text-slate-900">Konfigurasi Mesin Pembaca Lembar Jawaban (OCR)</h2>
+          <p class="text-xs text-slate-500">API Key disimpan secara lokal di browser perangkat Anda dan hanya diteruskan sementara saat memindai.</p>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Mesin Ekstraksi</label>
+            <select id="cfg-ocr-mode" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+              <option value="GEMINI">Google Gemini API (Flash Lite - Kuota Gratis)</option>
+              <option value="SNAPTOJSON">SnaptoJSON Partner API</option>
+              <option value="SIMULASI">Mode Simulasi Tanpa API Key (Uji Coba)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">API Key Pribadi Anda</label>
+            <input type="password" id="cfg-ocr-key" placeholder="Tempel API Key Gemini atau SnaptoJSON..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs">
+          </div>
+          <button onclick="simpanPengaturanOcr()" class="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold">Simpan Pengaturan OCR</button>
+        </div>
+      </section>
 
     </main>
   </div>
 
+  <!-- AREA CETAK TIMPA A4 -->
   <div id="print-area"></div>
 
   <script>
@@ -564,34 +580,26 @@
 
     let daftarPaketDecrypted = [];
     let antreanHasilGlobal = [];
-    let opsiConfig = ["A", "B", "C", "D", "E"];
     let dataSoalConfig = Array.from({ length: 40 }, (_, i) => ({
-      no: i + 1, tipe: i >= 30 ? "MCMA" : "PG", bobot: i >= 30 ? 4 : 2, kunci: []
+      no: i + 1, tipe: "PG", kunci: [], bobot: 2.5
     }));
 
-    function getPaketAktifObj(idPaket) {
-      return daftarPaketDecrypted.find(p => p.idPaket === idPaket) || null;
-    }
-
-    let mediaStream = null, scanLoopTimer = null, scannerState = "IDLE", prevGrayFrame = null, steadyTickCount = 0;
-    const REQUIRED_STEADY_TICKS = 10;
+    let mediaStream = null, scanLoopTimer = null, scannerState = "IDLE";
+    let steadyTickCount = 0, prevGrayFrame = null;
+    const REQUIRED_STEADY_TICKS = 6;
     const analysisCanvas = document.createElement("canvas");
-    analysisCanvas.width = 160; analysisCanvas.height = 120;
+    analysisCanvas.width = 160;
+    analysisCanvas.height = 120;
     const analysisCtx = analysisCanvas.getContext("2d", { willReadFrequently: true });
 
-    window.onload = function() {
-      renderMatriksConfig();
-      if (authToken && userProfile && userPin) {
-        masukKeAplikasi();
-      }
-    };
+    const strToBuf = (str) => new TextEncoder().encode(str);
+    const bufToBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const base64ToBuf = (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
 
-    async function deriveAesKey(pin, saltHex) {
-      const enc = new TextEncoder();
-      const saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
+    async function deriveCryptoKey(pin, saltHex) {
+      const keyMaterial = await crypto.subtle.importKey("raw", strToBuf(pin), "PBKDF2", false, ["deriveKey"]);
       return crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
+        { name: "PBKDF2", salt: strToBuf(saltHex), iterations: 100000, hash: "SHA-256" },
         keyMaterial,
         { name: "AES-GCM", length: 256 },
         false,
@@ -599,31 +607,39 @@
       );
     }
 
-    async function enkripsiDataSoal(objSoal, pin, saltHex) {
-      const key = await deriveAesKey(pin, saltHex);
+    async function enkripsiDataSoal(daftarSoalObj, pin, saltHex) {
+      const cryptoKey = await deriveCryptoKey(pin, saltHex);
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encoded = new TextEncoder().encode(JSON.stringify(objSoal));
-      const cipherBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
-      return {
-        encryptedSoal: btoa(String.fromCharCode(...new Uint8Array(cipherBuf))),
-        iv: btoa(String.fromCharCode(...iv))
-      };
+      const cipherBuf = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        cryptoKey,
+        strToBuf(JSON.stringify(daftarSoalObj))
+      );
+      return { encryptedSoal: bufToBase64(cipherBuf), iv: bufToBase64(iv) };
     }
 
-    async function dekripsiDataSoal(encryptedBase64, ivBase64, pin, saltHex) {
-      const key = await deriveAesKey(pin, saltHex);
-      const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
-      const cipherBytes = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
-      const plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipherBytes);
+    async function dekripsiDataSoal(encryptedB64, ivB64, pin, saltHex) {
+      const cryptoKey = await deriveCryptoKey(pin, saltHex);
+      const plainBuf = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: base64ToBuf(ivB64) },
+        cryptoKey,
+        base64ToBuf(encryptedB64)
+      );
       return JSON.parse(new TextDecoder().decode(plainBuf));
     }
 
-    function switchAuthTab(mode) {
+    function setAuthMode(mode) {
       authMode = mode;
-      document.getElementById("auth-nama-box").classList.toggle("hidden", mode === "login");
-      document.getElementById("tab-auth-login").className = mode === "login" ? "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm" : "flex-1 py-2 rounded-lg text-slate-500";
-      document.getElementById("tab-auth-reg").className = mode === "register" ? "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm" : "flex-1 py-2 rounded-lg text-slate-500";
-      document.getElementById("btn-auth-submit").textContent = mode === "login" ? "Masuk ke Ruang Kerja" : "Buat Akun Guru";
+      document.getElementById("field-nama").classList.toggle("hidden", mode === "login");
+      document.getElementById("tab-login").className = mode === "login"
+        ? "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm"
+        : "flex-1 py-2 rounded-lg text-slate-600";
+      document.getElementById("tab-register").className = mode === "register"
+        ? "flex-1 py-2 rounded-lg bg-white text-slate-900 shadow-sm"
+        : "flex-1 py-2 rounded-lg text-slate-600";
+      document.getElementById("btn-auth-submit").textContent = mode === "login"
+        ? "Masuk & Buka Brankas Soal"
+        : "Buat Akun & Enkripsi Brankas";
     }
 
     async function submitAuth() {
@@ -651,16 +667,7 @@
       sessionStorage.setItem("asas_user", JSON.stringify(userProfile));
       sessionStorage.setItem("asas_pin", userPin);
 
-      masukKeAplikasi();
-    }
-
-    function masukKeAplikasi() {
-      document.getElementById("auth-screen").classList.add("hidden");
-      document.getElementById("main-app").classList.remove("hidden");
-      document.getElementById("user-display-label").textContent = `${userProfile.nama} (${userProfile.email})`;
-      document.getElementById("ocr-mode-select").value = localStorage.getItem("asas_ocr_mode") || "SIMULASI";
-      document.getElementById("ocr-api-key-input").value = localStorage.getItem("asas_ocr_key") || "";
-      muatDaftarPaket();
+      masukAplikasi();
     }
 
     function logout() {
@@ -668,27 +675,31 @@
       location.reload();
     }
 
-    function bukaModalOcr() { document.getElementById("modal-ocr").classList.remove("hidden"); }
-    function tutupModalOcr() { document.getElementById("modal-ocr").classList.add("hidden"); }
-    function simpanSettingOcr() {
-      localStorage.setItem("asas_ocr_mode", document.getElementById("ocr-mode-select").value);
-      localStorage.setItem("asas_ocr_key", document.getElementById("ocr-api-key-input").value.trim());
-      alert("Pengaturan OCR tersimpan di browser Anda.");
-      tutupModalOcr();
+    async function masukAplikasi() {
+      document.getElementById("auth-screen").classList.add("hidden");
+      document.getElementById("main-app").classList.remove("hidden");
+      document.getElementById("header-user-info").textContent = `${userProfile.nama} (${userProfile.email}) | Enkripsi AES-GCM Aktif`;
+      document.getElementById("cfg-ocr-mode").value = localStorage.getItem("asas_ocr_mode") || "GEMINI";
+      document.getElementById("cfg-ocr-key").value = localStorage.getItem("asas_ocr_key") || "";
+      renderTabelKunci();
+      await muatDaftarPaket();
     }
 
+    window.addEventListener("DOMContentLoaded", () => {
+      if (authToken && userProfile && userPin) masukAplikasi();
+    });
+
     function bukaModul(nama) {
-      if (nama !== "scan" && mediaStream) matikanKamera();
-      ["scan", "config", "anbuso"].forEach(m => {
+      ["scan", "paket", "anbuso", "akun"].forEach(m => {
         document.getElementById("modul-" + m).classList.add("hidden");
-        document.getElementById("nav-" + m).className = "px-3.5 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition";
+        document.getElementById("nav-" + m).className = "px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition";
       });
       document.getElementById("modul-" + nama).classList.remove("hidden");
       document.getElementById("nav-" + nama).className = "px-3.5 py-2 rounded-lg text-xs font-bold bg-teal-600 text-white flex items-center gap-1.5 transition";
     }
 
     async function muatDaftarPaket(pilihId = null) {
-      const res = await fetch("/api/paket", { headers: { "Authorization": "Bearer " + authToken } });
+      const res = await fetch("/api/paket", { headers: { Authorization: "Bearer " + authToken } });
       if (res.status === 401) return logout();
       const rows = await res.json();
 
@@ -720,11 +731,42 @@
         ? mapelUnik.map(m => `<option value="${m}">${m}</option>`).join("")
         : `<option value="">Belum ada mapel</option>`;
 
+      renderDaftarPaketTersimpan();
+
       if (pilihId) {
         document.getElementById("scan-pilih-paket").value = pilihId;
         document.getElementById("anb-pilih-paket").value = pilihId;
       }
       muatAntreanHasil();
+    }
+
+    function renderDaftarPaketTersimpan() {
+      const container = document.getElementById("list-paket-tersimpan");
+      if (!container) return;
+      if (daftarPaketDecrypted.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 col-span-full">Belum ada paket soal tersimpan.</div>`;
+        return;
+      }
+      container.innerHTML = daftarPaketDecrypted.map(p => `
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-xs font-extrabold text-slate-900 truncate">[${p.mapel}] ${p.namaPaket}</div>
+            <div class="text-[11px] text-slate-500">${p.daftarSoal.length} Soal &bull; ${p.jenjang} &bull; ${p.aturanMcma}</div>
+          </div>
+          <button type="button" onclick="hapusPaketSoal('${p.idPaket}')" title="Hapus Paket" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100 transition">
+            <span class="material-icons-round text-base">delete</span>
+          </button>
+        </div>
+      `).join("");
+    }
+
+    async function hapusPaketSoal(idPaket) {
+      if (!confirm("Hapus paket soal ini beserta seluruh hasil scan siswanya?")) return;
+      const res = await fetch(`/api/paket/${idPaket}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + authToken }
+      });
+      if (res.ok) await muatDaftarPaket();
     }
 
     async function simpanPaketConfig() {
@@ -738,13 +780,13 @@
 
       const res = await fetch("/api/paket", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + authToken },
         body: JSON.stringify({
           mapel,
           namaPaket,
           jenjang: document.getElementById("cfg-jenjang").value,
           aturanMcma: document.getElementById("cfg-aturan-mcma").value,
-          offsetTop: Number(document.getElementById("cfg-offset-top").value) || 52,
+          offsetTop: Number(document.getElementById("cfg-offset-top").value) || 75,
           encryptedSoal,
           iv
         })
@@ -922,17 +964,26 @@
           const namaDummy = ["Ahmad Fauzi", "Nabila Putri", "Rizky Pratama", "Aisyah Rahma", "Dimas Saputra"];
           const jawSim = {};
           paket.daftarSoal.forEach(s => {
-            jawSim["no_" + s.no] = Math.random() < 0.75 ? s.kunci.join(", ") : opsi[Math.floor(Math.random() * opsi.length)];
+            jawSim["no_" + s.no] = Math.random() < 0.78 ? s.kunci.join(", ") : opsi[Math.floor(Math.random() * opsi.length)];
           });
           hasilOcr = {
-            identitas: { nama_siswa: namaDummy[Math.floor(Math.random() * namaDummy.length)] + " (Simulasi)", kelas: paket.jenjang === "SMA" ? "X-A" : "VII-A" },
+            identitas: {
+              nama_siswa: namaDummy[Math.floor(Math.random() * namaDummy.length)] + " (Simulasi)",
+              kelas: paket.jenjang === "SMA" ? "X-A" : "VII-A"
+            },
             jawaban_pg: jawSim
           };
         } else {
           const ocrRes = await fetch("/api/ocr-proxy", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
-            body: JSON.stringify({ modeOcr, apiKey, base64Image: base64Data, jenjang: paket.jenjang, jumlahSoal: paket.daftarSoal.length })
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + authToken },
+            body: JSON.stringify({
+              modeOcr,
+              apiKey,
+              base64Image: base64Data,
+              jenjang: paket.jenjang,
+              jumlahSoal: paket.daftarSoal.length
+            })
           });
           hasilOcr = await ocrRes.json();
           if (!ocrRes.ok) throw new Error(hasilOcr.error || "Gagal membaca foto.");
@@ -942,7 +993,7 @@
 
         await fetch("/api/hasil", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + authToken },
           body: JSON.stringify({ paketId: paket.idPaket, ...penilaian })
         });
 
@@ -1003,7 +1054,9 @@
             const skorParsial = Math.round(((jawabArr.length / kunciArr.length) * item.bobot) * 100) / 100;
             totalNilai += skorParsial;
             skorPerSoal.push(skorParsial);
-            if (jawabArr.length < kunciArr.length) daftarSalahCetak.push(`${item.no}(${jawabArr.join(",")}->${kunciArr.join(",")})`);
+            if (jawabArr.length < kunciArr.length) {
+              daftarSalahCetak.push(`${item.no}(${jawabArr.join(",")}->${kunciArr.join(",")})`);
+            }
           }
         }
       });
@@ -1025,9 +1078,10 @@
       const paket = getPaketAktifObj(idPaket);
       if (paket) document.getElementById("ekspor-pilih-mapel").value = paket.mapel;
 
-      const res = await fetch(`/api/hasil/paket/${idPaket}`, { headers: { "Authorization": "Bearer " + authToken } });
+      const res = await fetch(`/api/hasil/paket/${idPaket}`, { headers: { Authorization: "Bearer " + authToken } });
       const rows = await res.json();
       antreanHasilGlobal = rows.map(r => ({
+        id: r.id,
         nama: r.nama_siswa,
         kelas: r.kelas,
         nilaiAkhir: Number(r.nilai_akhir) || 0,
@@ -1035,7 +1089,7 @@
         ringkasanCetak: r.ringkasan_cetak,
         rawJawaban: JSON.parse(r.raw_jawaban_json || "{}"),
         skorPerSoal: JSON.parse(r.skor_per_soal_json || "[]"),
-        offsetTop: paket ? paket.offsetTop : 52
+        offsetTop: paket ? paket.offsetTop : 75
       }));
       document.getElementById("jumlah-antrean").textContent = antreanHasilGlobal.length;
 
@@ -1054,11 +1108,23 @@
           </td>
           <td class="py-2.5 px-3 font-extrabold text-teal-700 text-sm">${item.nilaiAkhir}</td>
           <td class="py-2.5 px-3 text-[11px] text-slate-600 max-w-xs truncate">${item.ringkasanCetak}</td>
-          <td class="py-2.5 px-3 text-right">
-            <button onclick="bukaModalCetak([${idx}])" class="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700">Pratinjau & Print</button>
+          <td class="py-2.5 px-3 text-right space-x-1">
+            <button onclick="bukaModalCetak([${idx}])" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-bold text-slate-700">Pratinjau & Print</button>
+            <button onclick="hapusSatuHasil(${item.id})" title="Hapus Data Ini" class="p-1 rounded-lg text-rose-600 hover:bg-rose-50 align-middle">
+              <span class="material-icons-round text-sm">delete</span>
+            </button>
           </td>
         </tr>
       `).join("");
+    }
+
+    async function hapusSatuHasil(idHasil) {
+      if (!confirm("Hapus hasil scan siswa ini?")) return;
+      const res = await fetch(`/api/hasil/${idHasil}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + authToken }
+      });
+      if (res.ok) await muatAntreanHasil();
     }
 
 
@@ -1066,14 +1132,42 @@
        ENGINE TEMA CETAK TIMPA, LINGKARAN KUNCI & PRATINJAU INTERAKTIF A4
        ===================================================================== */
     let temaCetakAktif = localStorage.getItem("asas_tema_cetak") || "classic";
-    let targetCetakIndices = null; // null = semua antrean, atau array [idx]
+    let targetCetakIndices = null;
+
+    function unggahLatarLjkPratinjau(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = document.getElementById("a4-uploaded-bg");
+        img.src = e.target.result;
+        img.classList.remove("hidden");
+        document.getElementById("btn-hapus-latar-ljk").classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function hapusLatarLjkPratinjau() {
+      const img = document.getElementById("a4-uploaded-bg");
+      img.src = "";
+      img.classList.add("hidden");
+      document.getElementById("btn-hapus-latar-ljk").classList.add("hidden");
+    }
 
     function bukaModalCetak(indices = null) {
       targetCetakIndices = indices;
       const idPaket = document.getElementById("scan-pilih-paket").value;
       const pkt = getPaketAktifObj(idPaket);
-      if (pkt && pkt.offsetTop) {
-        document.getElementById("prev-offset-top").value = pkt.offsetTop;
+      if (pkt) {
+        if (pkt.offsetTop) document.getElementById("prev-offset-top").value = pkt.offsetTop;
+        const presetEl = document.getElementById("prev-ljk-preset");
+        if (pkt.jenjang === "SMP" && presetEl.value === "sma3col") {
+          presetEl.value = "smp3col";
+          terapkanPresetLjk();
+        } else if (pkt.jenjang === "SMA" && presetEl.value === "smp3col") {
+          presetEl.value = "sma3col";
+          terapkanPresetLjk();
+        }
       }
 
       const jmlCetak = indices ? indices.length : antreanHasilGlobal.length;
@@ -1104,43 +1198,63 @@
 
     function terapkanPresetLjk() {
       const preset = document.getElementById("prev-ljk-preset").value;
-      if (preset === "2col") {
+      if (preset === "smp3col") {
+        document.getElementById("prev-ljk-top").value = 100.2;
+        document.getElementById("prev-ljk-left").value = 42.3;
+        document.getElementById("prev-ljk-rowh").value = 7.9;
+        document.getElementById("prev-ljk-colw").value = 52.6;
+        document.getElementById("prev-ljk-optgap").value = 9.5;
+        document.getElementById("prev-ljk-rowspercol").value = 15;
+      } else if (preset === "sma3col") {
+        document.getElementById("prev-ljk-top").value = 108.4;
+        document.getElementById("prev-ljk-left").value = 27.8;
+        document.getElementById("prev-ljk-rowh").value = 8.5;
+        document.getElementById("prev-ljk-colw").value = 62.3;
+        document.getElementById("prev-ljk-optgap").value = 9.5;
+        document.getElementById("prev-ljk-rowspercol").value = 15;
+      } else if (preset === "2col") {
         document.getElementById("prev-ljk-top").value = 98;
         document.getElementById("prev-ljk-left").value = 34;
         document.getElementById("prev-ljk-rowh").value = 7.5;
         document.getElementById("prev-ljk-colw").value = 85;
         document.getElementById("prev-ljk-optgap").value = 8.5;
+        document.getElementById("prev-ljk-rowspercol").value = 20;
       } else if (preset === "4col") {
         document.getElementById("prev-ljk-top").value = 105;
         document.getElementById("prev-ljk-left").value = 22;
         document.getElementById("prev-ljk-rowh").value = 8.0;
         document.getElementById("prev-ljk-colw").value = 46;
         document.getElementById("prev-ljk-optgap").value = 6.2;
+        document.getElementById("prev-ljk-rowspercol").value = 10;
       } else {
         document.getElementById("prev-ljk-top").value = 95;
         document.getElementById("prev-ljk-left").value = 45;
         document.getElementById("prev-ljk-rowh").value = 6.5;
         document.getElementById("prev-ljk-colw").value = 120;
         document.getElementById("prev-ljk-optgap").value = 10.0;
+        document.getElementById("prev-ljk-rowspercol").value = 40;
       }
       renderPratinjauCetak();
     }
 
     function ambilOpsiCetakSaatIni() {
       const preset = document.getElementById("prev-ljk-preset").value;
-      const cols = preset === "4col" ? 4 : (preset === "1col" ? 1 : 2);
+      const cols = (preset === "smp3col" || preset === "sma3col")
+        ? 3
+        : (preset === "4col" ? 4 : (preset === "1col" ? 1 : 2));
       return {
         tema: temaCetakAktif,
-        offsetTop: Number(document.getElementById("prev-offset-top").value) || 52,
+        offsetTop: Number(document.getElementById("prev-offset-top").value) || 75,
         warnaTinta: document.getElementById("prev-warna-tinta").value || "#dc2626",
         lingkarGrid: document.getElementById("prev-aktif-lingkar-grid").checked,
         ringkasanAtas: document.getElementById("prev-aktif-ringkasan-atas").checked,
         ljkCols: cols,
-        ljkTop: Number(document.getElementById("prev-ljk-top").value) || 98,
-        ljkLeft: Number(document.getElementById("prev-ljk-left").value) || 34,
-        ljkRowH: Number(document.getElementById("prev-ljk-rowh").value) || 7.5,
-        ljkColW: Number(document.getElementById("prev-ljk-colw").value) || 85,
-        ljkOptGap: Number(document.getElementById("prev-ljk-optgap").value) || 8.5
+        ljkTop: Number(document.getElementById("prev-ljk-top").value) || 100.2,
+        ljkLeft: Number(document.getElementById("prev-ljk-left").value) || 42.3,
+        ljkRowH: Number(document.getElementById("prev-ljk-rowh").value) || 7.9,
+        ljkColW: Number(document.getElementById("prev-ljk-colw").value) || 52.6,
+        ljkOptGap: Number(document.getElementById("prev-ljk-optgap").value) || 9.5,
+        ljkRowsPerCol: Math.max(1, Number(document.getElementById("prev-ljk-rowspercol").value) || 15)
       };
     }
 
@@ -1184,10 +1298,9 @@
       const statusLulus = nilai >= 75 ? "TUNTAS" : "REMEDIAL";
       const warna = cfg.warnaTinta;
 
-      // 1. Render Kotak Angka Nilai Sesuai Tema
       let stampHtml = "";
       if (cfg.tema === "circle") {
-        const diam = scaleFactor === 1 ? "21mm" : "44px";
+        const diam = scaleFactor === 1 ? "20mm" : "42px";
         stampHtml = `
           <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; width: ${diam}; height: ${diam}; border-radius: 9999px; border: 2px double ${warna}; color: ${warna}; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
             <span style="font-size: ${fSize(6.5)}; font-weight: 800; letter-spacing: 0.5px;">NILAI</span>
@@ -1201,7 +1314,7 @@
           </div>`;
       } else if (cfg.tema === "card") {
         stampHtml = `
-          <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; border: 1.5px solid ${warna}; border-left: 4px solid ${warna}; background: #fff; padding: ${scaleFactor === 1 ? '2mm 3mm' : '3px 6px'}; border-radius: 4px; color: #0f172a;">
+          <div style="position: absolute; right: ${u(14)}; top: ${u(cfg.offsetTop)}; border: 1.5px solid ${warna}; border-left: 4px solid ${warna}; background: #fff; padding: ${scaleFactor === 1 ? '1.8mm 3mm' : '3px 6px'}; border-radius: 4px; color: #0f172a;">
             <div style="display: flex; align-items: baseline; gap: 6px;">
               <span style="font-size: ${fSize(15)}; font-weight: 900; color: ${warna}; line-height: 1;">${nilai}</span>
               <span style="font-size: ${fSize(6.5)}; font-weight: 800; padding: 1px 4px; border: 1px solid ${warna}; border-radius: 3px; color: ${warna};">${statusLulus}</span>
@@ -1218,7 +1331,6 @@
           </div>`;
       }
 
-      // 2. Render Ringkasan Nomor Salah di Atas (Dengan Lingkaran pada Kunci Jawaban Benar)
       let ringkasanHtml = "";
       if (cfg.ringkasanAtas) {
         let isiKoreksi = "";
@@ -1227,26 +1339,25 @@
         } else {
           const itemBadges = evalData.detailSalah.map(s => {
             const kunciCircled = s.kunci.map(k =>
-              `<span style="display:inline-flex; align-items:center; justify-content:center; width:${scaleFactor === 1 ? '3.6mm' : '11px'}; height:${scaleFactor === 1 ? '3.6mm' : '11px'}; border-radius:9999px; border:1.2px solid ${warna}; color:${warna}; font-weight:900; font-size:${fSize(6.5)}; margin:0 1px;">${k}</span>`
+              `<span style="display:inline-flex; align-items:center; justify-content:center; width:${scaleFactor === 1 ? '3.5mm' : '11px'}; height:${scaleFactor === 1 ? '3.5mm' : '11px'}; border-radius:9999px; border:1.2px solid ${warna}; color:${warna}; font-weight:900; font-size:${fSize(6.2)}; margin:0 1px;">${k}</span>`
             ).join("");
-            return `<span style="display:inline-block; margin-right: 5px; margin-bottom: 2px;">No.${s.no}: <span style="text-decoration:line-through; opacity:0.75;">${s.jawabanSiswa}</span> &rarr; Kunci ${kunciCircled}</span>`;
+            return `<span style="display:inline-block; margin-right: 4px; margin-bottom: 1px;">No.${s.no}: <span style="text-decoration:line-through; opacity:0.75;">${s.jawabanSiswa}</span> &rarr; ${kunciCircled}</span>`;
           }).join("");
-          isiKoreksi = `<div style="margin-top: 2px;">${itemBadges}</div>`;
+          isiKoreksi = `<div style="margin-top: 1px;">${itemBadges}</div>`;
         }
 
         ringkasanHtml = `
-          <div style="position: absolute; left: ${u(20)}; right: ${u(52)}; top: ${u(cfg.offsetTop)}; font-size: ${fSize(7.2)}; line-height: 1.3; color: #0f172a; background: rgba(255,255,255,0.92); padding: 2px 4px; border-left: 2px solid ${warna};">
+          <div style="position: absolute; left: ${u(17)}; right: ${u(52)}; top: ${u(cfg.offsetTop)}; font-size: ${fSize(7.0)}; line-height: 1.25; color: #0f172a; background: rgba(255,255,255,0.92); padding: 2px 4px; border-left: 2px solid ${warna};">
             <div style="font-weight: 800;">${itemSiswa.nama} (${itemSiswa.kelas}) &bull; Benar ${evalData.jumlahBenar}/${evalData.totalSoal}</div>
             ${isiKoreksi}
           </div>`;
       }
 
-      // 3. Render Lingkaran Langsung di Atas Grid Pilihan Jawaban LJK untuk Nomor yang Salah
       let lingkaranGridHtml = "";
       if (cfg.lingkarGrid && evalData.detailSalah.length > 0) {
         const hurufList = ["A", "B", "C", "D", "E"];
-        const rowsPerCol = Math.ceil(evalData.totalSoal / cfg.ljkCols);
-        const circleDiam = scaleFactor === 1 ? "4.8mm" : "10px";
+        const rowsPerCol = cfg.ljkRowsPerCol || Math.ceil(evalData.totalSoal / cfg.ljkCols);
+        const circleDiam = scaleFactor === 1 ? "5.0mm" : "10.5px";
 
         evalData.detailSalah.forEach(salah => {
           const idxSoal = salah.no - 1;
@@ -1259,7 +1370,7 @@
             if (optIdx >= 0) {
               const xMm = cfg.ljkLeft + (colIdx * cfg.ljkColW) + (optIdx * cfg.ljkOptGap);
               lingkaranGridHtml += `
-                <div style="position: absolute; left: ${u(xMm)}; top: ${u(yMm)}; width: ${circleDiam}; height: ${circleDiam}; border: 1.6px solid ${warna}; border-radius: 9999px; transform: translate(-50%, -50%); box-sizing: border-box;"></div>`;
+                <div style="position: absolute; left: ${u(xMm)}; top: ${u(yMm)}; width: ${circleDiam}; height: ${circleDiam}; border: 1.7px solid ${warna}; border-radius: 9999px; transform: translate(-50%, -50%); box-sizing: border-box;"></div>`;
             }
           });
         });
@@ -1286,7 +1397,7 @@
         const dummySkor = [];
         soalRef.forEach((s, idx) => {
           const kunciUtama = s.kunci.length > 0 ? s.kunci[0] : "A";
-          if (idx === 1 || idx === 4 || idx === 8) {
+          if (idx === 1 || idx === 4 || idx === 16) {
             dummyRaw["no_" + s.no] = kunciUtama === "A" ? "B" : "A";
             dummySkor.push(0);
           } else {
@@ -1296,7 +1407,7 @@
         });
         sampelSiswa = {
           nama: "Nabila Putri (Contoh)",
-          kelas: "X-A",
+          kelas: paket ? (paket.jenjang === "SMA" ? "X-A" : "VII-A") : "X-A",
           nilaiAkhir: 92.5,
           rawJawaban: dummyRaw,
           skorPerSoal: dummySkor
@@ -1305,8 +1416,8 @@
 
       document.getElementById("preview-sample-info").textContent = `Pratinjau: ${sampelSiswa.nama} (${sampelSiswa.kelas})`;
 
-      const scale = 2.1; // 210mm * 2.1 = 441px
-      const rowsPerCol = Math.ceil(totalSoal / cfg.ljkCols);
+      const scale = 2.1;
+      const rowsPerCol = cfg.ljkRowsPerCol || Math.ceil(totalSoal / cfg.ljkCols);
       let ghostGrid = `
         <div style="border-bottom: 1px solid #94a3b8; margin: 16px 24px 8px 24px; padding-bottom: 6px; font-size: 8px; color: #475569; font-weight: 700;">
           LEMBAR JAWABAN ASESMEN SUMATIF AKHIR SEMESTER (SKETSA KERTAS SISWA)
@@ -1316,7 +1427,7 @@
         const colIdx = Math.floor(i / rowsPerCol);
         const rowIdx = i % rowsPerCol;
         const yPx = (cfg.ljkTop + rowIdx * cfg.ljkRowH) * scale;
-        const xNoPx = (cfg.ljkLeft + colIdx * cfg.ljkColW - 7) * scale;
+        const xNoPx = (cfg.ljkLeft + colIdx * cfg.ljkColW - 8.5) * scale;
         ghostGrid += `<span style="position:absolute; left:${xNoPx}px; top:${yPx}px; transform:translate(-50%,-50%); font-size:6.5px; color:#64748b; font-weight:700;">${i + 1}.</span>`;
 
         opsiHuruf.forEach((h, oIdx) => {
@@ -1345,7 +1456,7 @@
         const dummySkor = [];
         soalRef.forEach((s, idx) => {
           const kunciUtama = s.kunci.length > 0 ? s.kunci[0] : "A";
-          if (idx === 1 || idx === 4) {
+          if (idx === 1 || idx === 4 || idx === 16) {
             dummyRaw["no_" + s.no] = kunciUtama === "A" ? "B" : "A";
             dummySkor.push(0);
           } else {
@@ -1353,7 +1464,7 @@
             dummySkor.push(s.bobot);
           }
         });
-        daftarCetak = [{ nama: "Contoh Siswa", kelas: "X-A", nilaiAkhir: 95, rawJawaban: dummyRaw, skorPerSoal: dummySkor }];
+        daftarCetak = [{ nama: "Contoh Siswa", kelas: "X-A", nilaiAkhir: 92.5, rawJawaban: dummyRaw, skorPerSoal: dummySkor }];
       }
 
       document.getElementById("print-area").innerHTML = daftarCetak.map(siswa => `
@@ -1366,231 +1477,158 @@
       setTimeout(() => window.print(), 150);
     }
 
+
     /* =====================================================================
-       MANAJEMEN JUMLAH SOAL DINAMIS DI TAB KONFIGURASI
+       MANAJEMEN JUMLAH SOAL DINAMIS & EKSPOR EXCEL PER MAPEL
        ===================================================================== */
-    function ubahJumlahSoalConfig() {
-      let targetJumlah = parseInt(document.getElementById("cfg-jumlah-soal").value, 10);
-      if (isNaN(targetJumlah) || targetJumlah < 1) targetJumlah = 1;
-      if (targetJumlah > 100) {
-        targetJumlah = 100;
-        document.getElementById("cfg-jumlah-soal").value = 100;
-      }
+    function ubahJumlahSoal(jumlahBaru) {
+      const n = Math.max(1, Math.min(100, parseInt(jumlahBaru, 10) || 1));
+      document.getElementById("cfg-jumlah-soal").value = n;
 
-      const panjangLama = dataSoalConfig.length;
-      if (targetJumlah > panjangLama) {
-        for (let i = panjangLama; i < targetJumlah; i++) {
-          dataSoalConfig.push({
-            no: i + 1,
-            tipe: "PG",
-            bobot: 2,
-            kunci: []
-          });
+      if (n > dataSoalConfig.length) {
+        for (let i = dataSoalConfig.length + 1; i <= n; i++) {
+          dataSoalConfig.push({ no: i, tipe: "PG", kunci: [], bobot: 1 });
         }
-      } else if (targetJumlah < panjangLama) {
-        dataSoalConfig = dataSoalConfig.slice(0, targetJumlah);
+      } else if (n < dataSoalConfig.length) {
+        dataSoalConfig = dataSoalConfig.slice(0, n);
       }
 
-      renderMatriksConfig();
+      dataSoalConfig.forEach((item, idx) => { item.no = idx + 1; });
+      bobotOtomatis();
     }
 
-    function terapkanPresetMcmaAkhir() {
-      const total = dataSoalConfig.length;
-      const jmlMcma = Math.max(1, Math.round(total * 0.25));
-      const mulai = total - jmlMcma + 1;
-      dataSoalConfig.forEach(s => {
-        s.tipe = s.no >= mulai ? "MCMA" : "PG";
-        s.bobot = s.tipe === "MCMA" ? 4 : 2;
-        if (s.tipe === "PG" && s.kunci.length > 1) s.kunci = [s.kunci[0]];
-      });
-      renderMatriksConfig();
+    function terapkanJumlahSoal() {
+      ubahJumlahSoal(document.getElementById("cfg-jumlah-soal").value);
     }
 
+    function setJumlahSoalPreset(jumlah) {
+      ubahJumlahSoal(jumlah);
+    }
 
-    async function unduhExcelPerMapel() {
+    function tambahSatuSoal() {
+      ubahJumlahSoal(dataSoalConfig.length + 1);
+    }
+
+    function hapusSatuSoalTerakhir() {
+      if (dataSoalConfig.length <= 1) return alert("Minimal harus terdapat 1 butir soal.");
+      ubahJumlahSoal(dataSoalConfig.length - 1);
+    }
+
+    function hapusSoalPadaIndex(idx) {
+      if (dataSoalConfig.length <= 1) return alert("Minimal harus terdapat 1 butir soal.");
+      dataSoalConfig.splice(idx, 1);
+      dataSoalConfig.forEach((item, i) => { item.no = i + 1; });
+      document.getElementById("cfg-jumlah-soal").value = dataSoalConfig.length;
+      renderTabelKunci();
+    }
+
+    async function eksporExcelPerMapel() {
       const mapel = document.getElementById("ekspor-pilih-mapel").value;
-      const kktp = Number(document.getElementById("ekspor-kktp").value) || 75;
-      if (!mapel) return alert("Pilih mata pelajaran.");
+      if (!mapel) return alert("Pilih mata pelajaran terlebih dahulu.");
 
-      const res = await fetch(`/api/hasil/mapel/${encodeURIComponent(mapel)}`, { headers: { "Authorization": "Bearer " + authToken } });
-      const dataMapel = await res.json();
-      if (dataMapel.length === 0) return alert("Belum ada data nilai untuk mapel " + mapel);
+      const res = await fetch(`/api/hasil/mapel/${encodeURIComponent(mapel)}`, {
+        headers: { Authorization: "Bearer " + authToken }
+      });
+      const data = await res.json();
+      if (!data || data.length === 0) return alert("Belum ada nilai siswa untuk mapel " + mapel);
 
-      const wb = XLSX.utils.book_new();
-      const rowsNilai = dataMapel.map((d, idx) => ({
-        "No": idx + 1,
+      const barisExcel = data.map((d, idx) => ({
+        No: idx + 1,
         "Nama Siswa": d.nama_siswa,
-        "Kelas": d.kelas,
+        Kelas: d.kelas,
+        "Mata Pelajaran": mapel,
         "Paket Soal": d.nama_paket,
         "Nilai Akhir": d.nilai_akhir,
-        "Status KKTP": d.nilai_akhir >= kktp ? "TUNTAS" : "REMEDIAL",
+        "Status Validasi": d.status_validasi,
         "Rincian Koreksi": d.ringkasan_cetak
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsNilai), "Rekap Nilai");
 
-      const paketMapel = daftarPaketDecrypted.filter(p => p.mapel.toLowerCase() === mapel.toLowerCase());
-      let rowsAnbuso = [];
-      for (const pkt of paketMapel) {
-        const siswaPkt = dataMapel.filter(d => d.paket_id === pkt.idPaket);
-        if (siswaPkt.length >= 2) {
-          const hasilAnb = hitungStatistikAnbuso(pkt, siswaPkt, kktp);
-          hasilAnb.hasilButir.forEach(b => {
-            rowsAnbuso.push({
-              "Paket": pkt.namaPaket,
-              "No": b.no,
-              "Tipe": b.tipe,
-              "Kunci": b.kunci.join(", "),
-              "Kesukaran (P)": b.pIndex,
-              "Kategori P": b.kategoriKesukaran,
-              "Daya Pembeda (D)": b.dIndex,
-              "Kategori D": b.kategoriDayaPembeda,
-              "Keputusan": b.keputusan,
-              "Catatan": b.catatan
-            });
-          });
-        }
+      const ws = XLSX.utils.json_to_sheet(barisExcel);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap_" + mapel.substring(0, 20));
+      XLSX.writeFile(wb, `Rekap_Nilai_ASAS_${mapel.replace(/\s+/g, "_")}.xlsx`);
+    }
+
+    function renderTabelKunci() {
+      const jenjang = document.getElementById("cfg-jenjang").value;
+      const opsiList = jenjang === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
+      const inputJml = document.getElementById("cfg-jumlah-soal");
+      if (inputJml) inputJml.value = dataSoalConfig.length;
+
+      document.getElementById("tbody-kunci").innerHTML = dataSoalConfig.map((item, idx) => {
+        const tombolOpsi = opsiList.map(huruf => {
+          const aktif = item.kunci.includes(huruf);
+          return `<button type="button" onclick="toggleKunci(${idx}, '${huruf}')" class="w-8 h-8 rounded-lg font-bold text-xs border transition ${aktif ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}">${huruf}</button>`;
+        }).join(" ");
+
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2 px-3 font-bold">${item.no}</td>
+            <td class="py-2 px-3">
+              <select onchange="ubahTipeSoal(${idx}, this.value)" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold bg-white">
+                <option value="PG" ${item.tipe === "PG" ? "selected" : ""}>PG Tunggal</option>
+                <option value="MCMA" ${item.tipe === "MCMA" ? "selected" : ""}>MCMA (Kompleks)</option>
+              </select>
+            </td>
+            <td class="py-2 px-3"><div class="flex flex-wrap gap-1.5">${tombolOpsi}</div></td>
+            <td class="py-2 px-3"><input type="number" step="0.01" value="${item.bobot}" onchange="dataSoalConfig[${idx}].bobot = Number(this.value)" class="w-20 px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold"></td>
+            <td class="py-2 px-3 text-center">
+              <button type="button" onclick="hapusSoalPadaIndex(${idx})" title="Hapus nomor ini" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                <span class="material-icons-round text-base">delete_outline</span>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function ubahTipeSoal(idx, tipe) {
+      dataSoalConfig[idx].tipe = tipe;
+      if (tipe === "PG" && dataSoalConfig[idx].kunci.length > 1) {
+        dataSoalConfig[idx].kunci = [dataSoalConfig[idx].kunci[0]];
       }
-      if (rowsAnbuso.length > 0) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsAnbuso), "Analisis Butir Soal");
+      renderTabelKunci();
+    }
+
+    function toggleKunci(idx, huruf) {
+      const item = dataSoalConfig[idx];
+      if (item.tipe === "PG") {
+        item.kunci = [huruf];
+      } else {
+        item.kunci = item.kunci.includes(huruf)
+          ? item.kunci.filter(h => h !== huruf)
+          : [...item.kunci, huruf].sort();
       }
-
-      XLSX.writeFile(wb, `Rekap_ASAS_${mapel.replace(/\s+/g, "_")}.xlsx`);
+      renderTabelKunci();
     }
 
-    function renderMatriksConfig() {
-      const container = document.getElementById("cfg-grid-soal");
-      container.innerHTML = "";
-      const setengah = Math.ceil(dataSoalConfig.length / 2);
-      const grupList = [dataSoalConfig.slice(0, setengah), dataSoalConfig.slice(setengah)].filter(g => g.length > 0);
-
-      grupList.forEach(grup => {
-        const card = document.createElement("div");
-        card.className = "bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm";
-        let html = `<div class="bg-slate-900 text-white px-4 py-2 text-xs font-bold grid grid-cols-12"><div class="col-span-2">No</div><div class="col-span-3">Tipe</div><div class="col-span-5">Kunci</div><div class="col-span-2 text-right">Poin</div></div><div class="divide-y divide-slate-100">`;
-        grup.forEach(item => {
-          const isMCMA = item.tipe === "MCMA";
-          const btns = opsiConfig.map(h => {
-            const aktif = item.kunci.includes(h);
-            const cls = aktif ? (isMCMA ? "bg-emerald-600 text-white border-emerald-600" : "bg-teal-600 text-white border-teal-600") : "bg-white text-slate-600 border-slate-300";
-            return `<button type="button" onclick="toggleKunciConfig(${item.no}, '${h}')" class="w-7 h-7 rounded-lg border text-xs font-bold ${cls}">${h}</button>`;
-          }).join("");
-          html += `
-            <div class="px-4 py-1.5 grid grid-cols-12 items-center text-xs ${isMCMA ? 'bg-emerald-50/40' : ''}">
-              <div class="col-span-2 font-bold">${item.no}.</div>
-              <div class="col-span-3"><button type="button" onclick="toggleTipeConfig(${item.no})" class="px-2 py-0.5 rounded font-bold border ${isMCMA ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-700 border-slate-300'}">${item.tipe}</button></div>
-              <div class="col-span-5 flex gap-1">${btns}</div>
-              <div class="col-span-2 text-right"><input type="number" step="0.5" value="${item.bobot}" onchange="dataSoalConfig[${item.no - 1}].bobot = parseFloat(this.value)||0; hitungRingkasanConfig();" class="w-12 px-1 py-0.5 text-right font-bold border border-slate-200 rounded"></div>
-            </div>`;
-        });
-        card.innerHTML = html + `</div>`;
-        container.appendChild(card);
-      });
-      hitungRingkasanConfig();
+    function bobotOtomatis() {
+      const bobotPerItem = Math.round((100 / dataSoalConfig.length) * 100) / 100;
+      dataSoalConfig.forEach(item => item.bobot = bobotPerItem);
+      renderTabelKunci();
     }
 
-    function toggleTipeConfig(no) {
-      const s = dataSoalConfig[no - 1];
-      s.tipe = s.tipe === "PG" ? "MCMA" : "PG";
-      s.bobot = s.tipe === "MCMA" ? 4 : 2;
-      if (s.tipe === "PG" && s.kunci.length > 1) s.kunci = [s.kunci[0]];
-      renderMatriksConfig();
+    function simpanPengaturanOcr() {
+      localStorage.setItem("asas_ocr_mode", document.getElementById("cfg-ocr-mode").value);
+      localStorage.setItem("asas_ocr_key", document.getElementById("cfg-ocr-key").value.trim());
+      alert("Pengaturan OCR berhasil disimpan di perangkat Anda.");
     }
 
-    function toggleKunciConfig(no, h) {
-      const s = dataSoalConfig[no - 1];
-      if (s.tipe === "PG") s.kunci = [h];
-      else s.kunci = s.kunci.includes(h) ? s.kunci.filter(x => x !== h) : [...s.kunci, h].sort();
-      renderMatriksConfig();
-    }
-
-    function ubahJenjangConfig() {
-      const j = document.getElementById("cfg-jenjang").value;
-      opsiConfig = j === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
-      if (j === "SMP") dataSoalConfig.forEach(s => s.kunci = s.kunci.filter(h => h !== "E"));
-      renderMatriksConfig();
-    }
-
-    function autoKalibrasiConfig() {
-      const jmlPG = dataSoalConfig.filter(s => s.tipe === "PG").length;
-      const jmlMCMA = dataSoalConfig.filter(s => s.tipe === "MCMA").length;
-      const totalUnit = jmlPG + jmlMCMA * 2;
-      if (!totalUnit) return;
-      const bPG = Math.round((100 / totalUnit) * 100) / 100;
-      const bMCMA = Math.round((bPG * 2) * 100) / 100;
-      dataSoalConfig.forEach(s => s.bobot = s.tipe === "PG" ? bPG : bMCMA);
-      renderMatriksConfig();
-    }
-
-    function hitungRingkasanConfig() {
-      document.getElementById("cfg-count-total").textContent = dataSoalConfig.length;
-      document.getElementById("cfg-count-pg").textContent = dataSoalConfig.filter(s => s.tipe === "PG").length;
-      document.getElementById("cfg-count-mcma").textContent = dataSoalConfig.filter(s => s.tipe === "MCMA").length;
-      const tot = Math.round(dataSoalConfig.reduce((a, s) => a + s.bobot, 0) * 10) / 10;
-      document.getElementById("cfg-badge-total").textContent = `Total: ${tot} Poin`;
+    function getPaketAktifObj(idPaket) {
+      return daftarPaketDecrypted.find(p => p.idPaket === idPaket) || null;
     }
 
     async function jalankanAnbuso() {
       const idPaket = document.getElementById("anb-pilih-paket").value;
       const kktp = Number(document.getElementById("anb-kktp").value) || 75;
       const paket = getPaketAktifObj(idPaket);
-      if (!paket) return;
+      if (!paket) return alert("Pilih paket soal.");
 
-      const res = await fetch(`/api/hasil/paket/${idPaket}`, { headers: { "Authorization": "Bearer " + authToken } });
+      const res = await fetch(`/api/hasil/paket/${idPaket}`, { headers: { Authorization: "Bearer " + authToken } });
       const rows = await res.json();
-      if (rows.length < 2) {
-        document.getElementById("anb-status").textContent = "Minimal dibutuhkan 2 siswa untuk menghitung Anbuso.";
-        return;
-      }
+      if (rows.length < 3) return alert("Minimal diperlukan 3 lembar jawaban siswa untuk menjalankan analisis butir soal.");
 
-      const anb = hitungStatistikAnbuso(paket, rows, kktp);
-      document.getElementById("anb-status").textContent = `Analisis selesai (${anb.statistikKelas.jumlahSiswa} siswa).`;
-      document.getElementById("anb-hasil-container").classList.remove("hidden");
-
-      const st = anb.statistikKelas;
-      document.getElementById("anb-alpha").textContent = st.reliabilitasAlpha.toFixed(2);
-      document.getElementById("anb-alpha-ket").textContent = st.kategoriAlpha;
-      document.getElementById("anb-rata").textContent = st.rataRata;
-      document.getElementById("anb-sebaran").textContent = `Min: ${st.nilaiTerendah} | Max: ${st.nilaiTertinggi} | SD: ${st.simpanganBaku}`;
-      document.getElementById("anb-tuntas").textContent = st.persenTuntas + "%";
-      document.getElementById("anb-tuntas-det").textContent = `${st.jumlahTuntas} dari ${st.jumlahSiswa} siswa tuntas`;
-
-      document.getElementById("anb-jml-baik").textContent = anb.hasilButir.filter(b => b.keputusan === "Diterima").length + " Baik";
-      document.getElementById("anb-jml-revisi").textContent = anb.hasilButir.filter(b => b.keputusan === "Revisi").length + " Revisi";
-      document.getElementById("anb-jml-tolak").textContent = anb.hasilButir.filter(b => b.keputusan === "Ditolak").length + " Ganti";
-
-      const opsiList = paket.jenjang === "SMA" ? ["A", "B", "C", "D", "E"] : ["A", "B", "C", "D"];
-      document.getElementById("anb-tbody-soal").innerHTML = anb.hasilButir.map(b => {
-        const pills = opsiList.map(h => {
-          const pct = b.persenOpsi[h] || 0;
-          const cls = b.kunci.includes(h) ? "bg-emerald-600 text-white font-bold" : (pct >= 30 ? "bg-rose-100 text-rose-800 font-bold" : "bg-slate-100 text-slate-600");
-          return `<span class="px-1.5 py-0.5 rounded text-[11px] ${cls}">${h}:${pct}%</span>`;
-        }).join(" ");
-        const badgeKep = b.keputusan === "Diterima" ? "bg-emerald-100 text-emerald-800" : (b.keputusan === "Revisi" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800");
-        return `
-          <tr>
-            <td class="py-2.5 px-4 font-bold">${b.no}.</td>
-            <td class="py-2.5 px-3"><span class="font-bold">${b.tipe}</span> (${b.kunci.join(",")})</td>
-            <td class="py-2.5 px-3 font-semibold">${b.pIndex.toFixed(2)} (${b.kategoriKesukaran})</td>
-            <td class="py-2.5 px-3 font-semibold">${b.dIndex.toFixed(2)} (${b.kategoriDayaPembeda})</td>
-            <td class="py-2.5 px-4 flex flex-wrap gap-1">${pills}</td>
-            <td class="py-2.5 px-4"><span class="px-2 py-0.5 rounded-full font-bold ${badgeKep}">${b.keputusan}</span> <span class="text-slate-500 ml-1">${b.catatan}</span></td>
-          </tr>`;
-      }).join("");
-
-      document.getElementById("anb-tbody-siswa").innerHTML = anb.profilSiswa.map(s => `
-        <tr>
-          <td class="py-2 px-4 font-bold">#${s.peringkat}</td>
-          <td class="py-2 px-4 font-bold text-slate-900">${s.nama}</td>
-          <td class="py-2 px-3">${s.kelas}</td>
-          <td class="py-2 px-3 font-extrabold">${s.nilaiAkhir}</td>
-          <td class="py-2 px-3"><span class="px-2 py-0.5 rounded-full font-bold ${s.statusKktp === 'Tuntas' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${s.statusKktp}</span></td>
-          <td class="py-2 px-4 text-slate-600">${s.jumlahSalah > 0 ? `(${s.jumlahSalah} soal): No. ${s.daftarNomorSalah}` : 'Sempurna'}</td>
-        </tr>
-      `).join("");
-    }
-
-    function hitungStatistikAnbuso(paket, rawRows, kktp) {
-      const dataSiswa = rawRows.map(r => ({
+      const dataSiswa = rows.map(r => ({
         nama: r.nama_siswa,
         kelas: r.kelas,
         nilaiAkhir: Number(r.nilai_akhir) || 0,
@@ -1599,9 +1637,12 @@
       }));
 
       const N = dataSiswa.length;
-      const daftarNilai = dataSiswa.map(s => s.nilaiAkhir);
-      const rataRata = daftarNilai.reduce((a, b) => a + b, 0) / N;
-      const variansTotal = daftarNilai.reduce((acc, v) => acc + Math.pow(v - rataRata, 2), 0) / N;
+      const nilaiArr = dataSiswa.map(s => s.nilaiAkhir);
+      const rataRata = nilaiArr.reduce((a, b) => a + b, 0) / N;
+      const variansTotal = nilaiArr.reduce((acc, val) => acc + Math.pow(val - rataRata, 2), 0) / N;
+      const simpanganBaku = Math.sqrt(variansTotal);
+      const jumlahTuntas = dataSiswa.filter(s => s.nilaiAkhir >= kktp).length;
+
       const siswaUrut = [...dataSiswa].sort((a, b) => b.nilaiAkhir - a.nilaiAkhir);
       const nKelompok = Math.max(1, Math.round(N * 0.27));
       const kelompokAtas = siswaUrut.slice(0, nKelompok);
@@ -1611,16 +1652,18 @@
 
       const hasilButir = paket.daftarSoal.map((soal, idx) => {
         const bobotMaks = Number(soal.bobot) || 1;
-        const skorItem = dataSiswa.map(s => s.skorPerSoal[idx] || 0);
-        const rataItem = skorItem.reduce((a, b) => a + b, 0) / N;
-        jumlahVariansItem += skorItem.reduce((acc, v) => acc + Math.pow(v - rataItem, 2), 0) / N;
+        const skorItemSemua = dataSiswa.map(s => s.skorPerSoal[idx] || 0);
+        const rataItem = skorItemSemua.reduce((a, b) => a + b, 0) / N;
+        jumlahVariansItem += skorItemSemua.reduce((acc, val) => acc + Math.pow(val - rataItem, 2), 0) / N;
 
         const pIndex = rataItem / bobotMaks;
-        const kategoriKesukaran = pIndex < 0.30 ? "Sukar" : (pIndex > 0.70 ? "Mudah" : "Sedang");
+        let kategoriKesukaran = pIndex < 0.30 ? "Sukar" : (pIndex > 0.70 ? "Mudah" : "Sedang");
+
         const rataAtas = kelompokAtas.reduce((acc, s) => acc + (s.skorPerSoal[idx] || 0), 0) / nKelompok;
         const rataBawah = kelompokBawah.reduce((acc, s) => acc + (s.skorPerSoal[idx] || 0), 0) / nKelompok;
         const dIndex = (rataAtas / bobotMaks) - (rataBawah / bobotMaks);
-        const kategoriDayaPembeda = dIndex >= 0.40 ? "Sangat Baik" : (dIndex >= 0.30 ? "Baik" : (dIndex >= 0.20 ? "Cukup" : "Jelek"));
+
+        let kategoriDayaPembeda = dIndex >= 0.40 ? "Sangat Baik" : (dIndex >= 0.30 ? "Baik" : (dIndex >= 0.20 ? "Cukup" : "Jelek"));
 
         const distribusi = {};
         opsiHuruf.forEach(h => distribusi[h] = 0);
@@ -1632,18 +1675,35 @@
             });
           }
         });
+
         const persenOpsi = {};
-        opsiHuruf.forEach(h => persenOpsi[h] = Math.round((distribusi[h] / N) * 100));
+        let adaMiskonsepsi = false;
+        opsiHuruf.forEach(h => {
+          const pct = Math.round((distribusi[h] / N) * 100);
+          persenOpsi[h] = pct;
+          if (!soal.kunci.includes(h) && pct >= 30) adaMiskonsepsi = true;
+        });
 
         let keputusan = "Diterima", catatan = "Layak masuk bank soal.";
-        if (dIndex < 0.20) { keputusan = "Ditolak"; catatan = "Daya pembeda rendah, wajib diganti."; }
-        else if (dIndex < 0.30 || pIndex < 0.15 || pIndex > 0.90) { keputusan = "Revisi"; catatan = "Perbaiki pengecoh atau kesukaran soal."; }
+        if (dIndex < 0.20) {
+          keputusan = "Ditolak";
+          catatan = dIndex < 0 ? "Daya pembeda negatif. Wajib diganti." : "Daya pembeda rendah.";
+        } else if (dIndex < 0.30 || pIndex < 0.15 || pIndex > 0.90) {
+          keputusan = "Revisi";
+          catatan = "Perbaiki pengecoh atau tingkat kesukaran.";
+        }
 
         return {
-          no: soal.no, tipe: soal.tipe, kunci: soal.kunci,
-          pIndex: Math.round(pIndex * 100) / 100, kategoriKesukaran,
-          dIndex: Math.round(dIndex * 100) / 100, kategoriDayaPembeda,
-          persenOpsi, keputusan, catatan
+          no: soal.no,
+          kunci: soal.kunci,
+          pIndex: Math.round(pIndex * 100) / 100,
+          kategoriKesukaran,
+          dIndex: Math.round(dIndex * 100) / 100,
+          kategoriDayaPembeda,
+          persenOpsi,
+          adaMiskonsepsi,
+          keputusan,
+          catatan
         };
       });
 
@@ -1652,31 +1712,52 @@
       alpha = Math.max(0, Math.round(alpha * 100) / 100);
       const kategoriAlpha = alpha >= 0.80 ? "Sangat Tinggi" : (alpha >= 0.70 ? "Tinggi (Reliabel)" : (alpha >= 0.50 ? "Cukup" : "Rendah"));
 
-      const profilSiswa = siswaUrut.map((s, idx) => {
-        const nomorSalah = [];
-        paket.daftarSoal.forEach((soal, qIdx) => { if ((s.skorPerSoal[qIdx] || 0) < soal.bobot) nomorSalah.push(soal.no); });
-        return {
-          peringkat: idx + 1, nama: s.nama, kelas: s.kelas, nilaiAkhir: s.nilaiAkhir,
-          statusKktp: s.nilaiAkhir >= kktp ? "Tuntas" : "Remedial",
-          jumlahSalah: nomorSalah.length, daftarNomorSalah: nomorSalah.join(", ")
-        };
-      });
+      document.getElementById("anbuso-hasil-container").classList.remove("hidden");
+      document.getElementById("stat-rata").textContent = `${Math.round(rataRata * 10) / 10} (SD: ${Math.round(simpanganBaku * 10) / 10})`;
+      document.getElementById("stat-tuntas").textContent = `${jumlahTuntas}/${N} (${Math.round((jumlahTuntas / N) * 100)}%)`;
+      document.getElementById("stat-alpha").textContent = `${alpha} (${kategoriAlpha})`;
+      document.getElementById("stat-rentang").textContent = `${Math.min(...nilaiArr)} - ${Math.max(...nilaiArr)}`;
 
-      return {
-        statistikKelas: {
-          jumlahSiswa: N,
-          rataRata: Math.round(rataRata * 10) / 10,
-          nilaiTertinggi: Math.max(...daftarNilai),
-          nilaiTerendah: Math.min(...daftarNilai),
-          simpanganBaku: Math.round(Math.sqrt(variansTotal) * 10) / 10,
-          jumlahTuntas: dataSiswa.filter(s => s.nilaiAkhir >= kktp).length,
-          persenTuntas: Math.round((dataSiswa.filter(s => s.nilaiAkhir >= kktp).length / N) * 100),
-          reliabilitasAlpha: alpha,
-          kategoriAlpha
-        },
-        hasilButir,
-        profilSiswa
-      };
+      document.getElementById("tbody-anbuso-butir").innerHTML = hasilButir.map(b => {
+        const badgeKeputusan = b.keputusan === "Diterima"
+          ? `<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold">Diterima</span>`
+          : b.keputusan === "Revisi"
+            ? `<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold">Revisi</span>`
+            : `<span class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-bold">Ditolak</span>`;
+
+        const sebaranHtml = opsiHuruf.map(h => {
+          const isKunci = b.kunci.includes(h);
+          const pct = b.persenOpsi[h] || 0;
+          return `<span class="inline-block px-1.5 py-0.5 rounded mr-1 ${isKunci ? 'bg-teal-600 text-white font-bold' : (pct >= 30 ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-600')}">${h}:${pct}%</span>`;
+        }).join("");
+
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 font-bold">${b.no}</td>
+            <td class="py-2.5 px-3 font-extrabold text-teal-700">${b.kunci.join(",")}</td>
+            <td class="py-2.5 px-3">${b.pIndex} (${b.kategoriKesukaran})</td>
+            <td class="py-2.5 px-3">${b.dIndex} (${b.kategoriDayaPembeda})</td>
+            <td class="py-2.5 px-3">${sebaranHtml}</td>
+            <td class="py-2.5 px-3">${badgeKeputusan}<div class="text-[11px] text-slate-500 mt-0.5">${b.catatan}</div></td>
+          </tr>
+        `;
+      }).join("");
+
+      document.getElementById("tbody-anbuso-siswa").innerHTML = siswaUrut.map((s, idx) => {
+        const nomorSalah = [];
+        paket.daftarSoal.forEach((soal, qIdx) => {
+          if ((s.skorPerSoal[qIdx] || 0) < soal.bobot) nomorSalah.push(soal.no);
+        });
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 font-bold">#${idx + 1}</td>
+            <td class="py-2.5 px-3 font-semibold">${s.nama} <span class="text-slate-400">(${s.kelas})</span></td>
+            <td class="py-2.5 px-3 font-extrabold">${s.nilaiAkhir}</td>
+            <td class="py-2.5 px-3">${s.nilaiAkhir >= kktp ? '<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">Tuntas</span>' : '<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">Remedial</span>'}</td>
+            <td class="py-2.5 px-3 text-slate-600">${nomorSalah.length > 0 ? nomorSalah.join(", ") : "Tidak ada"}</td>
+          </tr>
+        `;
+      }).join("");
     }
   </script>
 </body>
