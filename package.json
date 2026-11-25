@@ -1,7 +1,7 @@
 {
-  "name": "smart-asas-studio",
+  "name": "koreksik-asas-studio",
   "version": "3.0.0",
-  "description": "Platform Koreksi LJK Kamera, Cetak Timpa Bertema + Lingkaran Kunci, dan Anbuso Zero-Knowledge",
+  "description": "KoreksiK-koreksi sekali KLIK dan anbuso",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
