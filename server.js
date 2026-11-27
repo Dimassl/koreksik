@@ -7,10 +7,30 @@ const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3050;
-const JWT_SECRET = process.env.JWT_SECRET || "ganti-dengan-string-acak-panjang-untuk-produksi-2026";
+const fs = require("fs");
+function ambilJwtSecret() {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  const f = path.join(__dirname, ".jwt-secret");
+  if (!fs.existsSync(f)) fs.writeFileSync(f, crypto.randomBytes(48).toString("hex"), { mode: 0o600 });
+  return fs.readFileSync(f, "utf8").trim();
+}
+const JWT_SECRET = ambilJwtSecret();
 
 app.use(express.json({ limit: "15mb" }));
-app.use(express.static(path.join(__dirname, "public")));
+app.disable("x-powered-by");
+if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY) || 1);
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(self), microphone=()"
+  });
+  next();
+});
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders: (res, p) => { if (p.endsWith("sw.js")) res.set("Cache-Control", "no-cache"); }
+}));
 
 const db = new Database(path.join(__dirname, "asas.db"));
 db.pragma("journal_mode = WAL");
@@ -69,10 +89,24 @@ function authMiddleware(req, res, next) {
   }
 }
 
-app.post("/api/auth/register", (req, res) => {
+const gagalLogin = new Map();
+function cekBatasLogin(req, res, next) {
+  const sekarang = Date.now();
+  const daftar = (gagalLogin.get(req.ip) || []).filter((t) => sekarang - t < 15 * 60 * 1000);
+  gagalLogin.set(req.ip, daftar);
+  if (daftar.length >= 10) {
+    return res.status(429).json({ error: "Terlalu banyak percobaan gagal. Coba lagi dalam 15 menit." });
+  }
+  next();
+}
+
+app.post("/api/auth/register", cekBatasLogin, (req, res) => {
   const { nama, email, password } = req.body;
   if (!nama || !email || !password) {
     return res.status(400).json({ error: "Lengkapi nama, email, dan password." });
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ error: "Password minimal 6 karakter." });
   }
 
   try {
@@ -96,13 +130,14 @@ app.post("/api/auth/register", (req, res) => {
   }
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", cekBatasLogin, (req, res) => {
   const { email, password } = req.body;
   const user = db
     .prepare("SELECT * FROM users WHERE email = ?")
     .get((email || "").toLowerCase().trim());
 
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  if (!user || typeof password !== "string" || !bcrypt.compareSync(password, user.password_hash)) {
+    gagalLogin.set(req.ip, [...(gagalLogin.get(req.ip) || []), Date.now()]);
     return res.status(401).json({ error: "Email atau password salah." });
   }
 
@@ -179,10 +214,14 @@ app.delete("/api/paket/:id", authMiddleware, (req, res) => {
 app.post("/api/ocr-proxy", authMiddleware, async (req, res) => {
   const { modeOcr, apiKey, base64Image, jenjang, jumlahSoal } = req.body;
   if (!apiKey) return res.status(400).json({ error: "API Key belum diisi pada Pengaturan Akun." });
+  const nSoal = Number(jumlahSoal);
+  if (!base64Image || !Number.isInteger(nSoal) || nSoal < 1 || nSoal > 100) {
+    return res.status(400).json({ error: "Foto atau jumlah soal tidak valid." });
+  }
 
   try {
     if (modeOcr === "GEMINI") {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent`;
       const hurufValid = jenjang === "SMA" ? "A, B, C, D, atau E" : "A, B, C, atau D";
       const propsSoal = {};
       for (let i = 1; i <= jumlahSoal; i++) propsSoal["no_" + i] = { type: "STRING" };
@@ -220,7 +259,7 @@ app.post("/api/ocr-proxy", authMiddleware, async (req, res) => {
 
       const fetchRes = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify(payload)
       });
       if (!fetchRes.ok) {
@@ -282,6 +321,9 @@ app.post("/api/hasil", authMiddleware, (req, res) => {
     rawJawaban,
     skorPerSoal
   } = req.body;
+
+  const milik = db.prepare("SELECT 1 FROM paket_soal WHERE id = ? AND user_id = ?").get(paketId, req.user.id);
+  if (!milik) return res.status(404).json({ error: "Paket tidak ditemukan." });
 
   const info = db
     .prepare(`
